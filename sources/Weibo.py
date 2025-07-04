@@ -10,7 +10,7 @@ from push import push_image_file
 
 
 # 配置
-RSS_URL = "http://68.64.177.186:1200/weibo/user/1935396210"  # 请修改为你的RSS服务地址
+RSS_URL = "http://"  # 请修改为你的RSS服务地址
 
 # 企业微信配置（默认为空，需要通过配置文件或命令行参数提供）
 WECOM_CONFIG = {}

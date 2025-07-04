@@ -5,7 +5,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    container_name: weibo-rss-monitor
+    container_name: WeiboForwarder
+    image: weibo-forwarder:latest
     restart: unless-stopped
     volumes:
       - ./outputs:/app/outputs
