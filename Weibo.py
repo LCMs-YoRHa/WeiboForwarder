@@ -541,8 +541,8 @@ class WeiboImageGenerator:
         if weibo_item.get('video_info') and weibo_item['video_info'].get('poster'):
             print("📹 下载视频封面...")
             if is_video_only:
-                # 纯视频微博：保持原始比例，但限制最大宽度
-                max_video_width = width - 2 * padding
+                # 纯视频微博：保持原始比例，但限制最大宽度（确保左右边距相等）
+                max_video_width = width - 2 * (margin + padding)
                 video_poster = self.download_image(weibo_item['video_info']['poster'], force_size=None)
                 # 按比例缩放，保持宽高比
                 video_poster = self.resize_keep_ratio(video_poster, (max_video_width, max_video_width))
@@ -555,8 +555,9 @@ class WeiboImageGenerator:
                 video_poster_with_icon = self.add_video_play_icon(video_poster)
                 images.append(video_poster_with_icon)
         
-        # 计算文字区域
-        text_width = width - 2 * padding
+        # 计算文字区域 - 确保左右边距相等
+        side_margin = margin + padding  # 左右边距相等
+        text_width = width - 2 * side_margin
         wrapped_content = self.wrap_text(weibo_item['content'], self.content_font, text_width)
         
         temp_img = Image.new("RGB", (width, 1000), "white")
@@ -630,11 +631,13 @@ class WeiboImageGenerator:
                 if is_video_only:
                     # 纯视频微博：居中显示，保持原始比例
                     video_width, video_height = images[0].size
-                    img_x = margin + padding + (width - 2 * padding - video_width) // 2
+                    content_area_width = width - 2 * (margin + padding)
+                    img_x = margin + padding + (content_area_width - video_width) // 2
                     canvas.paste(images[0], (img_x, image_start_y))
                 else:
                     # 单张图片，居中显示，正方形
-                    img_x = margin + padding + (width - 2 * padding - single_image_size[0]) // 2
+                    content_area_width = width - 2 * (margin + padding)
+                    img_x = margin + padding + (content_area_width - single_image_size[0]) // 2
                     canvas.paste(images[0], (img_x, image_start_y))
             else:
                 # 多张图片网格布局
