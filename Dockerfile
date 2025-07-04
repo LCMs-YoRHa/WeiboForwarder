@@ -8,15 +8,11 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV TZ=Asia/Shanghai
 
-# 安装系统依赖和中文字体
+# 安装系统依赖（移除字体下载，使用项目内置字体）
 RUN apt-get update && apt-get install -y \
-    wget \
     curl \
     ca-certificates \
-    fonts-noto-cjk \
-    fonts-noto-cjk-extra \
     fontconfig \
-    && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements文件
@@ -29,7 +25,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 创建必要目录
-RUN mkdir -p /app/outputs /app/logs /app/data /app/fonts
+RUN mkdir -p /app/outputs /app/logs /app/data
+
+# 更新字体缓存（使项目内置字体生效）
+RUN fc-cache -fv
 
 # 设置权限
 RUN chmod +x /app/*.py /app/*.sh
