@@ -57,6 +57,24 @@ DEMO_RSS_XML = '''<?xml version="1.0" encoding="UTF-8"?>
 <category>混合测试</category>
 </item>
 <item>
+<title>6张图片测试</title>
+<description><![CDATA[这是一个包含6张图片的网格对齐测试<br><br><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w2kuxej60nv0xcaji02.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax4.sinaimg.cn/large/0026YIXUgy1i320w3ooorj60nv0xcgu202.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax4.sinaimg.cn/large/0026YIXUgy1i320w4rqptj60nv0xc48502.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w646wmj60xc0xcnb702.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax2.sinaimg.cn/large/0026YIXUgy1i320w71r4wj60p00xc46s02.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w8jdswj60qo0xcqcd02.jpg" referrerpolicy="no-referrer">]]></description>
+<link>https://weibo.com/1935396210/Test6Images</link>
+<guid isPermaLink="false">https://weibo.com/1935396210/Test6Images</guid>
+<pubDate>Fri, 04 Jul 2025 07:40:00 GMT</pubDate>
+<author>测试用户</author>
+<category>网格测试</category>
+</item>
+<item>
+<title>4张图片测试</title>
+<description><![CDATA[这是一个包含4张图片的网格对齐测试<br><br><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w2kuxej60nv0xcaji02.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax4.sinaimg.cn/large/0026YIXUgy1i320w3ooorj60nv0xcgu202.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax4.sinaimg.cn/large/0026YIXUgy1i320w4rqptj60nv0xc48502.jpg" referrerpolicy="no-referrer"><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w646wmj60xc0xcnb702.jpg" referrerpolicy="no-referrer">]]></description>
+<link>https://weibo.com/1935396210/Test4Images</link>
+<guid isPermaLink="false">https://weibo.com/1935396210/Test4Images</guid>
+<pubDate>Fri, 04 Jul 2025 07:38:00 GMT</pubDate>
+<author>测试用户</author>
+<category>网格测试</category>
+</item>
+<item>
 <title>庵野秀明妻子安野梦洋子的少女漫画『魔女的考验』新作短篇动画化</title>
 <description><![CDATA[庵野秀明妻子安野梦洋子的少女漫画『魔女的考验』新作短篇动画化<br><br>监督：松井祐亮<br>动画制作：Khara <a href="https://video.weibo.com/show?fid=1034:5184493913571420" data-hide=""><span class="url-icon"><img style="width: 1rem;height: 1rem" src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video_default.png" referrerpolicy="no-referrer"></span><span class="surl-text">日推的微博视频</span></a> <br clear="both"><div style="clear: both"></div><video controls="controls" poster="https://tvax1.sinaimg.cn/orj480/0026YIXUgy1i31ywn95a7j60j20aqdjn02.jpg" style="width: 100%"><source src="https://f.video.weibocdn.com/o0/S4ln4fSqlx08pxcyRtb201041200SrlF0E010.mp4?label=mp4_720p&amp;template=1280x720.25.0" type="video/mp4"><p>视频无法显示</p></video>]]></description>
 <link>https://weibo.com/1935396210/PzxMFDdIO</link>
@@ -640,15 +658,27 @@ class WeiboImageGenerator:
                     img_x = margin + padding + (content_area_width - single_image_size[0]) // 2
                     canvas.paste(images[0], (img_x, image_start_y))
             else:
-                # 多张图片网格布局
+                # 多张图片网格布局 - 精确对齐
                 cols = min(3, len(images))
+                rows = math.ceil(len(images) / cols)
                 gap = 8
+                
+                # 计算网格的总宽度
+                total_grid_width = cols * grid_image_size[0] + (cols - 1) * gap
+                
+                # 计算网格起始位置（居中）
+                content_area_width = width - 2 * (margin + padding)
+                grid_start_x = margin + padding + (content_area_width - total_grid_width) // 2
+                grid_start_y = image_start_y
                 
                 for i, image in enumerate(images):
                     col = i % cols
                     row = i // cols
-                    x = margin + padding + col * (grid_image_size[0] + gap)
-                    y = image_start_y + row * (grid_image_size[1] + gap)
+                    
+                    # 精确计算每个图片的位置
+                    x = grid_start_x + col * (grid_image_size[0] + gap)
+                    y = grid_start_y + row * (grid_image_size[1] + gap)
+                    
                     canvas.paste(image, (x, y))
         
         # 保存图片
