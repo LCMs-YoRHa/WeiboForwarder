@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  weibo-monitor:
+    build: .
+    container_name: weibo-rss-monitor
+    restart: unless-stopped
+    volumes:
+      - ./outputs:/app/outputs
+      - ./logs:/app/logs
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      # 默认配置（可在.env文件中覆盖）
+      CHECK_INTERVAL: ${CHECK_INTERVAL:-300}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      MAX_RETRIES: ${MAX_RETRIES:-3}
+      TIMEOUT: ${TIMEOUT:-30}
+    networks:
+      - weibo-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('/app/logs/weibo_monitor.log') else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  weibo-network:
+    driver: bridge

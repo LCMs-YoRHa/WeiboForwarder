@@ -13,6 +13,11 @@ outputs/*.png
 
 # 配置文件（保护隐私）
 wecom_config.py
+.env
+
+# Docker数据
+logs/
+data/
 
 # IDE
 .idea/

@@ -13,10 +13,11 @@ import math
 import os
 from datetime import datetime
 from html import unescape
+from font_manager import ensure_fonts
 
 
 # 配置
-FONT_PATH = "C:/Windows/Fonts/msyh.ttc"  # Windows字体路径
+FONT_PATH = ensure_fonts()  # 使用字体管理器获取字体路径
 OUTPUT_DIR = "outputs"
 
 # 演示用的RSS XML数据
@@ -234,12 +235,15 @@ class WeiboImageGenerator:
     def setup_fonts(self):
         """设置字体"""
         try:
-            self.name_font = ImageFont.truetype(FONT_PATH, 20)
-            self.time_font = ImageFont.truetype(FONT_PATH, 14)
-            self.content_font = ImageFont.truetype(FONT_PATH, 18)
-            print("✅ 字体加载成功")
-        except:
-            print("⚠️ 字体加载失败，使用默认字体")
+            if FONT_PATH:
+                self.name_font = ImageFont.truetype(FONT_PATH, 20)
+                self.time_font = ImageFont.truetype(FONT_PATH, 14)
+                self.content_font = ImageFont.truetype(FONT_PATH, 18)
+                print("✅ 字体加载成功")
+            else:
+                raise Exception("字体路径为空")
+        except Exception as e:
+            print(f"⚠️ 字体加载失败，使用默认字体: {e}")
             self.name_font = ImageFont.load_default()
             self.time_font = ImageFont.load_default()
             self.content_font = ImageFont.load_default()
@@ -436,7 +440,7 @@ class WeiboImageGenerator:
         except:
             return pub_date
     
-    def generate_screenshot(self, channel_info, weibo_item, filename=None):
+    def generate_screenshot(self, channel_info, weibo_item, filename=None, output_prefix=None):
         """生成微博截图"""
         
         # 设置画布参数
@@ -453,7 +457,8 @@ class WeiboImageGenerator:
         if not filename:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             safe_id = weibo_item.get('id', 'unknown')[:10]
-            filename = f"weibo_{safe_id}_{timestamp}.jpg"
+            prefix = output_prefix if output_prefix else "weibo"
+            filename = f"{prefix}_{safe_id}_{timestamp}.jpg"
         
         output_path = os.path.join(OUTPUT_DIR, filename)
         

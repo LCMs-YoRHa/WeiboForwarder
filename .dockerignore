@@ -1,0 +1,50 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs and data (will be mounted as volumes)
+logs/
+data/
+outputs/
+
+# Config files with secrets
+.env
+wecom_config.py
+
+# Test files
+*test*.py
+test_*
+tests/
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Old files
+*_OLD.*
+backup/

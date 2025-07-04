@@ -1,2 +1,4 @@
-requests==2.31.0
-Pillow==10.0.1
+requests>=2.31.0
+Pillow>=10.0.0
+feedparser>=6.0.10
+python-dateutil>=2.8.2

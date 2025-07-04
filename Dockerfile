@@ -8,12 +8,15 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV TZ=Asia/Shanghai
 
-# 安装系统依赖
+# 安装系统依赖和中文字体
 RUN apt-get update && apt-get install -y \
     wget \
     curl \
     ca-certificates \
     fonts-noto-cjk \
+    fonts-noto-cjk-extra \
+    fontconfig \
+    && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements文件
@@ -25,11 +28,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制应用代码
 COPY . .
 
-# 创建输出目录
-RUN mkdir -p /app/outputs
+# 创建必要目录
+RUN mkdir -p /app/outputs /app/logs /app/data /app/fonts
 
 # 设置权限
-RUN chmod +x /app/*.py
+RUN chmod +x /app/*.py /app/*.sh
 
 # 暴露端口（如果需要健康检查等）
 EXPOSE 8000

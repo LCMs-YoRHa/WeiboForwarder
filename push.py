@@ -170,4 +170,14 @@ def push_image_file(image_path, corpid=None, corpsecret=None, agentid=None,
             print("❌ 无法创建企业微信推送器：缺少配置信息")
             return False
     
-    return notifier.push_image(image_path, touser, toparty, totag)
+    success = notifier.push_image(image_path, touser, toparty, totag)
+    
+    # 如果推送成功，标记图片用于后续清理
+    if success:
+        try:
+            from cleanup import mark_image_pushed
+            mark_image_pushed(image_path)
+        except Exception as e:
+            print(f"⚠️ 标记图片清理失败: {e}")
+    
+    return success
