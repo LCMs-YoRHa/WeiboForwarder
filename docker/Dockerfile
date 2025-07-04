@@ -21,8 +21,8 @@ COPY requirements.txt .
 # 安装Python依赖
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 复制应用代码
-COPY . .
+# 复制源码
+COPY sources/ ./
 
 # 创建必要目录
 RUN mkdir -p /app/outputs /app/logs /app/data

@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   weibo-monitor:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
     container_name: weibo-rss-monitor
     restart: unless-stopped
     volumes:

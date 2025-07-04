@@ -23,8 +23,8 @@ git clone <repository-url>
 cd weibo-rss-monitor
 
 # 一键部署（自动安装Docker和依赖）
-chmod +x deploy.sh
-sudo ./deploy.sh
+chmod +x docker/deploy.sh
+sudo ./docker/deploy.sh
 ```
 
 ### 手动部署
@@ -104,23 +104,32 @@ WECOM_TOUSER=@all  # 接收者
 
 ```
 weibo-rss-monitor/
-├── create.py              # 长图生成模块
-├── push.py                # 企业微信推送模块
-├── monitor.py             # 实时监听服务
-├── Weibo.py               # 命令行工具
-├── font_manager.py        # 字体管理模块
-├── cleanup.py             # 自动清理模块
-├── manual_cleanup.sh      # 手动清理脚本
-├── healthcheck.py         # 健康检查
-├── docker-compose.yml     # Docker编排
-├── Dockerfile             # Docker镜像
-├── deploy.sh              # 一键部署脚本
-├── start.sh               # 启动脚本
-├── .env.example           # 配置模板
-├── outputs/               # 输出图片目录
-├── logs/                  # 日志目录
-├── data/                  # 数据目录
-└── README.md             # 项目说明
+├── sources/               # 源码目录
+│   ├── create.py          # 长图生成模块
+│   ├── push.py            # 企业微信推送模块
+│   ├── monitor.py         # 实时监听服务
+│   ├── Weibo.py           # 命令行工具
+│   ├── font_manager.py    # 字体管理模块
+│   ├── cleanup.py         # 自动清理模块
+│   ├── manual_cleanup.sh  # 手动清理脚本
+│   ├── run_cleanup.sh     # 定时清理脚本
+│   ├── wecom_config.py    # 企业微信配置
+│   └── fonts/            # 字体文件目录
+├── docker/               # Docker相关文件
+│   ├── Dockerfile        # Docker镜像定义
+│   ├── .dockerignore     # Docker忽略文件
+│   ├── deploy.sh         # 一键部署脚本
+│   ├── start.sh          # Docker启动脚本
+│   └── healthcheck.py    # 健康检查脚本
+├── docker-compose.yml    # Docker编排文件
+├── start.sh              # 快速启动脚本
+├── .env.example          # 配置模板
+├── .env                  # 配置文件（需要创建）
+├── requirements.txt      # Python依赖
+├── outputs/              # 输出图片目录
+├── logs/                 # 日志目录
+├── data/                 # 数据目录
+└── README.md            # 项目说明
 ```
 
 ## 🔧 高级用法
@@ -129,13 +138,13 @@ weibo-rss-monitor/
 
 ```bash
 # 从RSS源生成长图
-python Weibo.py --rss-url http://your-rss-url --index 0
+python sources/Weibo.py --rss-url http://your-rss-url --index 0
 
 # 自动推送到企业微信（需配置）
-python Weibo.py --rss-url http://your-rss-url --index 0 --push
+python sources/Weibo.py --rss-url http://your-rss-url --index 0 --push
 
 # 列出所有微博
-python Weibo.py --rss-url http://your-rss-url --list
+python sources/Weibo.py --rss-url http://your-rss-url --list
 ```
 
 ### 监听服务管理
