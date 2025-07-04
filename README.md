@@ -13,11 +13,41 @@
 - 🎬 **视频封面支持** - 智能提取视频封面，添加播放图标标识
   - 自动识别视频内容，提取poster封面图
   - 添加半透明播放图标，清晰标识视频内容
-  - 与图片统一处理，保持布局一致性
+  - 纯视频微博保持原始比例，混合媒体统一正方形
 - 🔄 **智能布局** - 圆形头像、智能换行、整齐的正方形网格布局
+- 📤 **企业微信推送** - 生成长图后自动推送到企业微信
+  - 支持推送给指定用户、部门、标签
+  - 自动上传图片并发送消息
+  - 支持配置文件和命令行参数两种配置方式
 - 💻 **命令行工具** - 支持多种命令行参数，灵活使用
 - 🛡️ **容错处理** - 图片下载失败时显示占位图
 - 🎯 **演示模式** - 内置样例数据，无需网络即可体验
+
+## 项目结构
+
+```
+f:\Projects\Python\Weibo\
+├── Weibo.py                           # 主程序入口（命令行界面）
+├── create.py                          # 长图生成模块
+├── push.py                            # 企业微信推送模块
+├── wecom_config.py                    # 企业微信配置模板
+├── requirements.txt                   # 依赖列表
+├── README.md                          # 主要说明文档
+├── 快速开始.md                        # 快速开始指南
+├── 企业微信推送使用说明.md             # 推送配置说明
+├── quick_push.bat                     # 推送启动器（英文）
+├── 微博推送器.bat                     # 推送启动器（中文）
+├── 推送启动器.bat                     # 原始推送启动器
+├── 启动器.bat                         # 基础启动器
+├── .gitignore                         # Git忽略文件
+└── outputs/                           # 输出目录
+```
+
+### 模块说明
+
+- **Weibo.py** - 主程序，处理命令行参数和业务逻辑
+- **create.py** - 长图生成模块，包含RSS解析和图片生成功能
+- **push.py** - 企业微信推送模块，处理图片上传和消息发送
 
 ## 环境要求
 
@@ -30,7 +60,7 @@
 pip install -r requirements.txt
 ```
 
-## 使用方法
+## 快速开始
 
 ### 1. 基本使用
 
@@ -46,39 +76,43 @@ python Weibo.py
 python Weibo.py --demo
 ```
 
-查看演示数据中的所有微博：
+### 3. 企业微信推送
+
+配置企业微信信息后，生成并推送长图：
 ```bash
-python Weibo.py --demo --list
+python Weibo.py --demo --push
 ```
 
-生成演示数据中的特定微博：
-```bash
-python Weibo.py --demo --index 1 --output "我的测试图.jpg"
+## 企业微信推送配置
+
+1. 复制 `wecom_config.py` 文件，填入你的企业微信信息：
+```python
+WECOM_CONFIG = {
+    'corpid': 'your_corp_id_here',
+    'corpsecret': 'your_corp_secret_here', 
+    'agentid': 1000000,
+    'touser': '@all',
+}
 ```
 
-### 3. 选择特定微博
+2. 详细配置方法请参考：[企业微信推送使用说明.md](企业微信推送使用说明.md)
 
-生成第3条微博的长图（索引从0开始）：
+## 常用命令
+
 ```bash
-python Weibo.py --index 2
-```
-
-### 4. 列出所有微博
-
-查看RSS源中的所有微博：
-```bash
+# 列出所有微博
 python Weibo.py --list
-```
 
-### 5. 自定义输出文件名
+# 生成指定微博
+python Weibo.py --index 2
 
-```bash
+# 生成并推送
+python Weibo.py --index 0 --push
+
+# 自定义输出文件名
 python Weibo.py --index 1 --output "我的微博.jpg"
-```
 
-### 6. 使用自定义RSS源
-
-```bash
+# 使用自定义RSS源
 python Weibo.py --rss-url "http://your-rss-server.com/weibo/user/123456"
 ```
 
@@ -88,44 +122,13 @@ python Weibo.py --rss-url "http://your-rss-server.com/weibo/user/123456"
 
 ```python
 # RSS源URL - 修改为你的RSS服务地址
-RSS_URL = "http://68.64.177.186:1200/weibo/user/1935396210"
+RSS_URL = "http://your-rss-server:1200/weibo/user/user_id"
 
 # 字体路径 - Windows系统默认微软雅黑
 FONT_PATH = "C:/Windows/Fonts/msyh.ttc"
 
 # 输出目录
 OUTPUT_DIR = "outputs"
-```
-
-## 输出说明
-
-- 长图保存在 `outputs` 目录下
-- 文件名格式：`weibo_{微博ID}_{时间戳}.jpg`
-- 图片质量：95%，启用优化压缩
-
-## RSS服务要求
-
-需要RSS服务返回如下格式的XML数据：
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
-  <channel>
-    <title>用户名的微博</title>
-    <description>微博RSS源</description>
-    <link>https://weibo.com/u/1935396210</link>
-    <image>
-      <url>头像URL</url>
-    </image>
-    <item>
-      <title>微博标题</title>
-      <description><![CDATA[包含HTML的微博内容]]></description>
-      <link>https://weibo.com/detail/微博ID</link>
-      <pubDate>Fri, 04 Jul 2025 07:51:28 GMT</pubDate>
-      <author>用户名</author>
-    </item>
-  </channel>
-</rss>
 ```
 
 ## 常见问题
@@ -139,26 +142,15 @@ A: 确保Windows系统中有微软雅黑字体，或修改 `FONT_PATH` 为其他
 ### Q: RSS获取超时
 A: 检查RSS服务是否正常运行，网络连接是否稳定。
 
-## 示例
+### Q: 企业微信推送失败
+A: 检查企业微信配置是否正确，参考推送使用说明文档。
 
-1. 列出微博列表：
-```bash
-python Weibo.py --list
-```
+## 输出说明
 
-2. 生成第一条微博：
-```bash
-python Weibo.py --index 0 --output "最新微博.jpg"
-```
+- 长图保存在 `outputs` 目录下
+- 文件名格式：`weibo_{微博ID}_{时间戳}.jpg`
+- 图片质量：95%，启用优化压缩
 
-3. 使用其他RSS源：
-```bash
-python Weibo.py --rss-url "http://localhost:1200/weibo/user/其他用户ID"
-```
+## 许可证
 
-## 更新日志
-
-- v1.0 - 初始版本，支持基于RSS的微博长图生成
-- 支持多图布局、视频封面、智能换行
-- 命令行参数支持
-- 容错处理机制
+MIT License

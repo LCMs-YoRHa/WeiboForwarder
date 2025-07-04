@@ -1,2 +1,29 @@
-/.idea
-__pycache__/Weibo.cpython-313.pyc
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+
+# 输出文件
+outputs/*.jpg
+outputs/*.png
+
+# 配置文件（保护隐私）
+wecom_config.py
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.log
