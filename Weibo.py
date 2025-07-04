@@ -16,7 +16,7 @@ from html import unescape
 import argparse
 
 # 配置
-RSS_URL = "http://68.64.177.186:1200/weibo/user/1935396210"
+RSS_URL = "http://68.64.177.186:1200/weibo/user/1195908387"
 FONT_PATH = "C:/Windows/Fonts/msyh.ttc"  # Windows字体路径
 OUTPUT_DIR = "outputs"
 
@@ -38,6 +38,33 @@ DEMO_RSS_XML = '''<?xml version="1.0" encoding="UTF-8"?>
 </image>
 <lastBuildDate>Fri, 04 Jul 2025 09:23:58 GMT</lastBuildDate>
 <ttl>1</ttl>
+<item>
+<title>纯视频微博测试</title>
+<description><![CDATA[这是一个只包含视频的微博测试<br><br><a href="https://video.weibo.com/show?fid=1034:5184493913571420" data-hide=""><span class="url-icon"><img style="width: 1rem;height: 1rem" src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video_default.png" referrerpolicy="no-referrer"></span><span class="surl-text">测试视频</span></a> <br clear="both"><div style="clear: both"></div><video controls="controls" poster="https://tvax1.sinaimg.cn/orj480/0026YIXUgy1i31ywn95a7j60j20aqdjn02.jpg" style="width: 100%"><source src="https://f.video.weibocdn.com/o0/S4ln4fSqlx08pxcyRtb201041200SrlF0E010.mp4?label=mp4_720p" type="video/mp4"><p>视频无法显示</p></video>]]></description>
+<link>https://weibo.com/1935396210/TestVideo001</link>
+<guid isPermaLink="false">https://weibo.com/1935396210/TestVideo001</guid>
+<pubDate>Fri, 04 Jul 2025 08:00:00 GMT</pubDate>
+<author>测试用户</author>
+<category>视频测试</category>
+</item>
+<item>
+<title>混合媒体测试</title>
+<description><![CDATA[这是一个包含图片和视频的混合媒体测试<br><br><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w2kuxej60nv0xcaji02.jpg" referrerpolicy="no-referrer"><video controls="controls" poster="https://tvax1.sinaimg.cn/orj480/0026YIXUgy1i31ywn95a7j60j20aqdjn02.jpg" style="width: 100%"><source src="https://f.video.weibocdn.com/o0/S4ln4fSqlx08pxcyRtb201041200SrlF0E010.mp4?label=mp4_720p" type="video/mp4"><p>视频无法显示</p></video>]]></description>
+<link>https://weibo.com/1935396210/TestMixed001</link>
+<guid isPermaLink="false">https://weibo.com/1935396210/TestMixed001</guid>
+<pubDate>Fri, 04 Jul 2025 07:45:00 GMT</pubDate>
+<author>测试用户</author>
+<category>混合测试</category>
+</item>
+<item>
+<title>庵野秀明妻子安野梦洋子的少女漫画『魔女的考验』新作短篇动画化</title>
+<description><![CDATA[庵野秀明妻子安野梦洋子的少女漫画『魔女的考验』新作短篇动画化<br><br>监督：松井祐亮<br>动画制作：Khara <a href="https://video.weibo.com/show?fid=1034:5184493913571420" data-hide=""><span class="url-icon"><img style="width: 1rem;height: 1rem" src="https://h5.sinaimg.cn/upload/2015/09/25/3/timeline_card_small_video_default.png" referrerpolicy="no-referrer"></span><span class="surl-text">日推的微博视频</span></a> <br clear="both"><div style="clear: both"></div><video controls="controls" poster="https://tvax1.sinaimg.cn/orj480/0026YIXUgy1i31ywn95a7j60j20aqdjn02.jpg" style="width: 100%"><source src="https://f.video.weibocdn.com/o0/S4ln4fSqlx08pxcyRtb201041200SrlF0E010.mp4?label=mp4_720p&amp;template=1280x720.25.0" type="video/mp4"><p>视频无法显示</p></video>]]></description>
+<link>https://weibo.com/1935396210/PzxMFDdIO</link>
+<guid isPermaLink="false">https://weibo.com/1935396210/PzxMFDdIO</guid>
+<pubDate>Fri, 04 Jul 2025 07:51:28 GMT</pubDate>
+<author>日推</author>
+<category>动画</category>
+</item>
 <item>
 <title>『致不灭的你』动画第三季「现世篇」视觉图公开！2025年10月开播！#致不灭的你#致不灭的你 [图片]</title>
 <description><![CDATA[『致不灭的你』动画第三季「现世篇」视觉图公开！2025年10月开播！<br><br><a href="https://m.weibo.cn/search?containerid=231522type%3D1%26t%3D10%26q%3D%23%E8%87%B4%E4%B8%8D%E7%81%AD%E7%9A%84%E4%BD%A0%23&amp;isnewpage=1" data-hide=""><span class="surl-text">#致不灭的你#</span></a><a href="https://m.weibo.cn/p/index?extparam=%E8%87%B4%E4%B8%8D%E7%81%AD%E7%9A%84%E4%BD%A0&amp;containerid=100808eabefa96b785163efc88d03e1ed298e8" data-hide=""><span class="url-icon"><img style="width: 1rem;height: 1rem" src="https://n.sinaimg.cn/photo/5213b46e/20180926/timeline_card_small_super_default.png" referrerpolicy="no-referrer"></span><span class="surl-text">致不灭的你</span></a> <img style="" src="https://tvax2.sinaimg.cn/large/0026YIXUgy1i31y7wpyenj60xc1b64a602.jpg" referrerpolicy="no-referrer">]]></description>
@@ -203,10 +230,19 @@ class RSSWeiboParser:
         # 过滤出有效的图片URL
         valid_urls = []
         for url in matches:
-            # 跳过小图标
-            if 'icon' not in url.lower() and 'emoji' not in url.lower():
-                if url.startswith('http'):
-                    valid_urls.append(url)
+            # 跳过小图标和系统图标
+            skip_keywords = ['icon', 'emoji', 'timeline_card', 'small_video_default', '1rem', 'avatar']
+            should_skip = any(keyword in url.lower() for keyword in skip_keywords)
+            
+            # 检查img标签的style属性是否包含小尺寸
+            img_match = re.search(rf'<img[^>]*src="{re.escape(url)}"[^>]*>', html_content)
+            if img_match:
+                img_tag = img_match.group(0)
+                if 'width: 1rem' in img_tag or 'height: 1rem' in img_tag:
+                    should_skip = True
+            
+            if not should_skip and url.startswith('http'):
+                valid_urls.append(url)
         
         return valid_urls
     
@@ -251,8 +287,8 @@ class WeiboImageGenerator:
             self.time_font = ImageFont.load_default()
             self.content_font = ImageFont.load_default()
     
-    def download_image(self, url, max_size=None, force_size=None):
-        """下载图片，保持原始比例"""
+    def download_image(self, url, square_size=None, force_size=None):
+        """下载图片，可选择裁剪为正方形或强制调整尺寸"""
         try:
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -266,15 +302,15 @@ class WeiboImageGenerator:
             if force_size:
                 # 强制调整为指定尺寸（用于头像）
                 img = img.resize(force_size, Image.Resampling.LANCZOS)
-            elif max_size:
-                # 保持比例，但限制最大尺寸
-                img = self.resize_keep_ratio(img, max_size)
+            elif square_size:
+                # 裁剪为正方形
+                img = self.crop_to_square(img, square_size)
             
             return img
         except Exception as e:
             print(f"⚠️ 图片下载失败: {url[:50]}... 错误: {e}")
             # 创建占位图片
-            placeholder_size = force_size or max_size or (300, 300)
+            placeholder_size = force_size or square_size or (300, 300)
             placeholder = Image.new("RGB", placeholder_size, "#E0E0E0")
             draw = ImageDraw.Draw(placeholder)
             draw.text((10, 10), "图片\n加载失败", fill="#666666", font=self.content_font)
@@ -296,16 +332,111 @@ class WeiboImageGenerator:
         
         return img.resize((new_width, new_height), Image.Resampling.LANCZOS)
     
+    def add_video_play_icon(self, img):
+        """在图片上添加视频播放图标"""
+        width, height = img.size
+        
+        # 创建带透明度的播放图标
+        icon_size = min(width, height) // 4
+        icon_x = (width - icon_size) // 2
+        icon_y = (height - icon_size) // 2
+        
+        # 创建一个新的图层用于绘制图标
+        overlay = Image.new('RGBA', img.size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(overlay)
+        
+        # 绘制半透明圆形背景
+        circle_radius = icon_size // 2
+        circle_center = (icon_x + circle_radius, icon_y + circle_radius)
+        draw.ellipse([
+            circle_center[0] - circle_radius, circle_center[1] - circle_radius,
+            circle_center[0] + circle_radius, circle_center[1] + circle_radius
+        ], fill=(0, 0, 0, 128))
+        
+        # 绘制三角形播放图标
+        triangle_size = icon_size // 3
+        triangle_x = circle_center[0] - triangle_size // 3
+        triangle_y = circle_center[1]
+        
+        triangle_points = [
+            (triangle_x, triangle_y - triangle_size // 2),
+            (triangle_x, triangle_y + triangle_size // 2),
+            (triangle_x + triangle_size, triangle_y)
+        ]
+        draw.polygon(triangle_points, fill=(255, 255, 255, 255))
+        
+        # 将图标叠加到原图片上
+        result = img.convert('RGBA')
+        result = Image.alpha_composite(result, overlay)
+        return result.convert('RGB')
+    
+    def crop_to_square(self, img, size):
+        """从中心裁剪图片为正方形"""
+        original_width, original_height = img.size
+        target_size = size[0]  # 目标正方形边长
+        
+        # 计算裁剪区域，从中心开始
+        if original_width > original_height:
+            # 横向图片，以高度为准
+            scale = target_size / original_height
+            new_width = int(original_width * scale)
+            new_height = target_size
+            
+            # 先缩放
+            img_scaled = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # 从中心裁剪为正方形
+            left = (new_width - target_size) // 2
+            top = 0
+            right = left + target_size
+            bottom = target_size
+            
+        else:
+            # 纵向图片或正方形，以宽度为准
+            scale = target_size / original_width
+            new_width = target_size
+            new_height = int(original_height * scale)
+            
+            # 先缩放
+            img_scaled = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            
+            # 从中心裁剪为正方形
+            left = 0
+            top = (new_height - target_size) // 2
+            right = target_size
+            bottom = top + target_size
+        
+        # 执行裁剪
+        cropped = img_scaled.crop((left, top, right, bottom))
+        return cropped
+    
     def create_circle_avatar(self, avatar_img, size):
-        """创建圆形头像"""
+        """创建圆形头像，带微妙阴影"""
+        # 创建圆形蒙版
         mask = Image.new("L", size, 0)
         draw = ImageDraw.Draw(mask)
         draw.ellipse((0, 0, size[0], size[1]), fill=255)
         
+        # 调整头像尺寸
         avatar_resized = avatar_img.resize(size, Image.Resampling.LANCZOS)
-        result = Image.new("RGBA", size, (0, 0, 0, 0))
-        result.paste(avatar_resized, (0, 0))
-        result.putalpha(mask)
+        
+        # 创建带阴影的头像
+        shadow_size = (size[0] + 4, size[1] + 4)
+        shadow = Image.new("RGBA", shadow_size, (0, 0, 0, 0))
+        shadow_draw = ImageDraw.Draw(shadow)
+        
+        # 绘制阴影
+        shadow_draw.ellipse([2, 2, size[0] + 2, size[1] + 2], fill=(0, 0, 0, 30))
+        
+        # 创建头像
+        result = Image.new("RGBA", shadow_size, (0, 0, 0, 0))
+        avatar_bg = Image.new("RGBA", size, (255, 255, 255, 255))
+        avatar_bg.paste(avatar_resized, (0, 0))
+        avatar_bg.putalpha(mask)
+        
+        # 合成阴影和头像
+        result = Image.alpha_composite(result, shadow)
+        result.paste(avatar_bg, (0, 0), avatar_bg)
         
         return result
     
@@ -358,9 +489,8 @@ class WeiboImageGenerator:
         padding = 25
         spacing = 15
         avatar_size = (60, 60)
-        max_image_width = width - 2 * padding  # 图片最大宽度
-        max_single_image_height = 600  # 单张图片最大高度
-        grid_image_max_size = (220, 220)  # 网格图片最大尺寸
+        single_image_size = (600, 600)  # 单张图片的正方形尺寸
+        grid_image_size = (200, 200)    # 网格图片的正方形尺寸
         
         # 生成文件名
         if not filename:
@@ -382,31 +512,48 @@ class WeiboImageGenerator:
         
         avatar = self.create_circle_avatar(avatar_img, avatar_size)
         
-        # 下载配图
+        # 下载配图和视频封面
         images = []
+        total_media_count = len(weibo_item.get('image_urls', []))
+        
+        # 如果有视频，计入总媒体数量
+        if weibo_item.get('video_info') and weibo_item['video_info'].get('poster'):
+            total_media_count += 1
+        
+        # 根据总媒体数量决定尺寸
+        use_single_size = (total_media_count == 1)
+        target_size = single_image_size if use_single_size else grid_image_size
+        
+        # 检查是否为纯视频微博（只有视频，没有图片）
+        is_video_only = (len(weibo_item.get('image_urls', [])) == 0 and 
+                        weibo_item.get('video_info') and 
+                        weibo_item['video_info'].get('poster'))
+        
+        # 下载图片
         if weibo_item.get('image_urls'):
             print(f"📷 下载 {len(weibo_item['image_urls'])} 张配图...")
             for i, url in enumerate(weibo_item['image_urls'], 1):
                 print(f"  下载第 {i}/{len(weibo_item['image_urls'])} 张图片...")
-                if len(weibo_item['image_urls']) == 1:
-                    # 单张图片，保持原比例但限制最大尺寸
-                    img = self.download_image(url, max_size=(max_image_width, max_single_image_height))
-                else:
-                    # 多张图片，使用网格布局
-                    img = self.download_image(url, max_size=grid_image_max_size)
+                img = self.download_image(url, square_size=target_size)
                 images.append(img)
         
-        # 如果有视频，添加视频封面
+        # 下载视频封面
         if weibo_item.get('video_info') and weibo_item['video_info'].get('poster'):
             print("📹 下载视频封面...")
-            if len(images) == 0:
-                # 如果只有视频封面，使用单张图片的处理方式
-                video_poster = self.download_image(weibo_item['video_info']['poster'], max_size=(max_image_width, max_single_image_height))
+            if is_video_only:
+                # 纯视频微博：保持原始比例，但限制最大宽度
+                max_video_width = width - 2 * padding
+                video_poster = self.download_image(weibo_item['video_info']['poster'], force_size=None)
+                # 按比例缩放，保持宽高比
+                video_poster = self.resize_keep_ratio(video_poster, (max_video_width, max_video_width))
             else:
-                # 如果还有其他图片，使用网格布局
-                video_poster = self.download_image(weibo_item['video_info']['poster'], max_size=grid_image_max_size)
+                # 混合媒体：裁剪为正方形
+                video_poster = self.download_image(weibo_item['video_info']['poster'], square_size=target_size)
+            
             if video_poster:
-                images.append(video_poster)
+                # 添加播放图标
+                video_poster_with_icon = self.add_video_play_icon(video_poster)
+                images.append(video_poster_with_icon)
         
         # 计算文字区域
         text_width = width - 2 * padding
@@ -421,67 +568,57 @@ class WeiboImageGenerator:
         image_area_height = 0
         if images:
             if len(images) == 1:
-                # 单张图片，已经处理好比例
-                image_area_height = images[0].size[1] + spacing
+                if is_video_only:
+                    # 纯视频微博：使用实际视频封面高度
+                    image_area_height = images[0].size[1] + spacing
+                else:
+                    # 单张图片，固定正方形尺寸
+                    image_area_height = single_image_size[1] + spacing
             else:
-                # 多张图片，计算网格布局高度
+                # 多张图片，网格布局，固定正方形尺寸
                 cols = min(3, len(images))
                 rows = math.ceil(len(images) / cols)
-                
-                # 找出最高的图片作为行高参考
-                max_height_in_grid = max(img.size[1] for img in images)
                 gap = 8
-                image_area_height = rows * (max_height_in_grid + gap) - gap + spacing
+                image_area_height = rows * grid_image_size[1] + (rows - 1) * gap + spacing
         
         # 计算总高度
         header_height = avatar_size[1] + spacing
         content_height = text_height + spacing * 2
         total_height = margin * 2 + header_height + content_height + image_area_height + 40
         
-        # 创建画布
-        canvas = Image.new("RGB", (width, total_height), "#F7F7F7")
+        # 创建画布 - 使用更自然的背景色
+        canvas = Image.new("RGB", (width, total_height), "#FAFAFA")
         draw = ImageDraw.Draw(canvas)
         
-        # 绘制白色内容区域
-        content_rect = [margin, margin, width - margin, total_height - margin]
-        draw.rectangle(content_rect, fill="white", outline="#E1E8ED", width=1)
+        # 不再绘制白色背景框
         
-        # 绘制头像
+        # 绘制头像（带阴影）
         avatar_x = margin + padding
         avatar_y = margin + padding
         
-        # 头像背景圆圈
-        draw.ellipse([
-            avatar_x, avatar_y,
-            avatar_x + avatar_size[0],
-            avatar_y + avatar_size[1]
-        ], fill="white", outline="#E1E8ED", width=1)
-        
-        # 粘贴头像
-        avatar_bg = Image.new("RGB", avatar_size, "white")
-        avatar_bg.paste(avatar, (0, 0), avatar)
-        canvas.paste(avatar_bg, (avatar_x, avatar_y))
+        # 粘贴带阴影的头像
+        canvas.paste(avatar, (avatar_x - 2, avatar_y - 2), avatar)
         
         # 绘制用户信息
         name_x = avatar_x + avatar_size[0] + 15
         name_y = avatar_y + 8
         
-        # 用户名
+        # 用户名 - 使用更深的颜色增强对比度
         author_name = weibo_item.get('author', '未知用户')
-        draw.text((name_x, name_y), author_name, font=self.name_font, fill="#333333")
+        draw.text((name_x, name_y), author_name, font=self.name_font, fill="#1A1A1A")
         
         # 发布时间
         time_y = name_y + 28
         formatted_time = self.format_time(weibo_item.get('pub_date', ''))
-        draw.text((name_x, time_y), formatted_time, font=self.time_font, fill="#999999")
+        draw.text((name_x, time_y), formatted_time, font=self.time_font, fill="#666666")
         
-        # 绘制正文内容
+        # 绘制正文内容 - 使用更深的颜色增强可读性
         content_y = margin + padding + header_height + 10
         draw.multiline_text(
             (margin + padding, content_y),
             wrapped_content,
             font=self.content_font,
-            fill="#333333",
+            fill="#1A1A1A",
             spacing=8
         )
         
@@ -490,33 +627,26 @@ class WeiboImageGenerator:
             image_start_y = content_y + text_height + spacing
             
             if len(images) == 1:
-                # 单张图片
-                canvas.paste(images[0], (margin + padding, image_start_y))
+                if is_video_only:
+                    # 纯视频微博：居中显示，保持原始比例
+                    video_width, video_height = images[0].size
+                    img_x = margin + padding + (width - 2 * padding - video_width) // 2
+                    canvas.paste(images[0], (img_x, image_start_y))
+                else:
+                    # 单张图片，居中显示，正方形
+                    img_x = margin + padding + (width - 2 * padding - single_image_size[0]) // 2
+                    canvas.paste(images[0], (img_x, image_start_y))
             else:
                 # 多张图片网格布局
                 cols = min(3, len(images))
                 gap = 8
-                current_x = margin + padding
-                current_y = image_start_y
                 
                 for i, image in enumerate(images):
                     col = i % cols
                     row = i // cols
-                    
-                    # 如果是新行，重置X坐标并更新Y坐标
-                    if col == 0 and i > 0:
-                        current_x = margin + padding
-                        # 使用上一行最高的图片来计算Y偏移
-                        prev_row_start = (row - 1) * cols
-                        prev_row_end = min(prev_row_start + cols, len(images))
-                        prev_row_max_height = max(images[j].size[1] for j in range(prev_row_start, prev_row_end))
-                        current_y += prev_row_max_height + gap
-                    
-                    # 绘制图片
-                    canvas.paste(image, (current_x, current_y))
-                    
-                    # 更新X坐标
-                    current_x += image.size[0] + gap
+                    x = margin + padding + col * (grid_image_size[0] + gap)
+                    y = image_start_y + row * (grid_image_size[1] + gap)
+                    canvas.paste(image, (x, y))
         
         # 保存图片
         canvas.save(output_path, quality=95, optimize=True)
