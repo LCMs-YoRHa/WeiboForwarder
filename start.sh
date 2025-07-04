@@ -12,6 +12,25 @@ if [ ! -f .env ]; then
     exit 1
 fi
 
+# 检查必要的网络和容器
+echo "🔍 检查RSSHub网络连接..."
+
+# 检查rsshub_default网络是否存在
+if docker network ls | grep -q rsshub_default; then
+    echo "✅ rsshub_default 网络已找到"
+else
+    echo "⚠️  rsshub_default 网络未找到"
+    echo "💡 如果您的RSSHub使用不同的网络名称，请修改 docker-compose.yml"
+fi
+
+# 检查rsshub容器是否运行
+if docker ps | grep -q rsshub; then
+    echo "✅ RSSHub 容器正在运行"
+else
+    echo "⚠️  RSSHub 容器未运行"
+    echo "💡 请确保RSSHub服务已启动，或在.env中使用外部地址"
+fi
+
 echo "✅ 配置文件检查通过"
 
 # 检查Docker是否运行

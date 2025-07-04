@@ -84,9 +84,28 @@ python monitor.py
 
 ### RSS监听配置
 
+#### 连接到现有的RSSHub服务
+
+如果您已有运行的RSSHub Docker容器，可以直接连接：
+
 ```bash
-RSS_URLS=http://rss1.example.com,http://rss2.example.com  # 多个RSS地址
+# 查看RSSHub容器信息
+docker inspect rsshub
+
+# 在.env文件中配置Docker内部地址
+RSS_URLS=http://rsshub:1200/weibo/user/123456  # 使用容器名
 CHECK_INTERVAL=300  # 检查间隔（秒）
+```
+
+**重要**: 确保 `docker-compose.yml` 中的网络名称与您的RSSHub容器网络一致：
+- 如果RSSHub网络名为 `rsshub_default`，已自动配置
+- 如果不同，请修改 `docker-compose.yml` 中的网络名称
+
+#### 外部RSS地址配置
+
+```bash
+# 使用外部地址
+RSS_URLS=http://your-server-ip:1200/weibo/user/123456,https://rsshub.app/weibo/user/789012
 ```
 
 ### 企业微信配置
@@ -202,10 +221,58 @@ python healthcheck.py
 
 ## 🔍 故障排除
 
+### RSSHub 连接问题
+
+#### 检查网络连接
+
+```bash
+# Linux/macOS
+./docker/network-check.sh
+
+# Windows
+./docker/network-check.bat
+```
+
+#### 手动验证连接
+
+```bash
+# 检查RSSHub容器状态
+docker ps | grep rsshub
+
+# 检查网络
+docker network ls | grep rsshub
+
+# 测试内部连接
+docker exec weibo-rss-monitor ping rsshub
+```
+
+#### 常见解决方案
+
+1. **网络名称不匹配**
+   ```bash
+   # 查看RSSHub实际网络名称
+   docker inspect rsshub | grep NetworkMode
+   
+   # 修改 docker-compose.yml 中的网络名称
+   ```
+
+2. **RSSHub未运行**
+   ```bash
+   # 启动RSSHub服务
+   docker start rsshub
+   ```
+
+3. **使用外部地址**
+   ```bash
+   # 在.env中使用服务器IP
+   RSS_URLS=http://your-server-ip:1200/weibo/user/xxx
+   ```
+
 ### 常见问题
 
 1. **RSS地址无法访问**
    - 检查网络连接和RSS地址有效性
+   - 使用 `python sources/test_rsshub.py` 测试连接
    - 查看监听服务日志
 
 2. **企业微信推送失败**
