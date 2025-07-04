@@ -128,9 +128,13 @@ class RSSWeiboParser:
     
     @staticmethod
     def clean_html(html_content):
-        """清理HTML内容，提取纯文本"""
+        """清理HTML内容，提取纯文本并保留正确的换行"""
         if not html_content:
             return ''
+        
+        # 先替换<br>为换行（在删除其他标签之前）
+        html_content = re.sub(r'<br\s*/?>', '\n', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<br>', '\n', html_content, flags=re.IGNORECASE)
         
         # 移除视频标签
         html_content = re.sub(r'<video.*?</video>', '', html_content, flags=re.DOTALL)
@@ -142,16 +146,22 @@ class RSSWeiboParser:
         html_content = re.sub(r'<a[^>]*>(.*?)</a>', r'\1', html_content)
         html_content = re.sub(r'<[^>]+>', '', html_content)
         
-        # 替换<br>为换行
-        html_content = re.sub(r'<br\s*/?>', '\n', html_content)
+        # 处理段落标签为双换行
+        html_content = re.sub(r'</p>\s*<p[^>]*>', '\n\n', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'</?p[^>]*>', '\n', html_content, flags=re.IGNORECASE)
         
-        # 清理多余空行
-        html_content = re.sub(r'\n\s*\n', '\n', html_content)
+        # 处理div标签为换行
+        html_content = re.sub(r'</div>\s*<div[^>]*>', '\n', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'</?div[^>]*>', '\n', html_content, flags=re.IGNORECASE)
         
         # 解码HTML实体
         html_content = unescape(html_content)
         
-        return html_content.strip()
+        # 清理多余空行（保留单个换行）
+        html_content = re.sub(r'\n\s*\n\s*\n+', '\n\n', html_content)
+        html_content = re.sub(r'^\s+|\s+$', '', html_content)  # 去除首尾空白
+        
+        return html_content
     
     @staticmethod
     def extract_image_urls(html_content):
@@ -214,9 +224,9 @@ class WeiboImageGenerator:
         """设置字体"""
         try:
             if FONT_PATH:
-                self.name_font = ImageFont.truetype(FONT_PATH, 20)
-                self.time_font = ImageFont.truetype(FONT_PATH, 14)
-                self.content_font = ImageFont.truetype(FONT_PATH, 18)
+                self.name_font = ImageFont.truetype(FONT_PATH, 22)  # 用户名字体稍大
+                self.time_font = ImageFont.truetype(FONT_PATH, 16)  # 时间字体
+                self.content_font = ImageFont.truetype(FONT_PATH, 20)  # 正文字体增大
                 print("✅ 字体加载成功")
             else:
                 raise Exception("字体路径为空")
@@ -380,7 +390,10 @@ class WeiboImageGenerator:
         return result
     
     def wrap_text(self, text, font, max_width):
-        """文字换行"""
+        """文字换行（优化中文换行）"""
+        if not text:
+            return ''
+            
         lines = []
         paragraphs = text.split('\n')
         
@@ -392,22 +405,58 @@ class WeiboImageGenerator:
                 lines.append('')
                 continue
             
+            # 对于很长的段落，优先在标点符号处换行
             current_line = ''
-            for char in paragraph:
+            i = 0
+            while i < len(paragraph):
+                char = paragraph[i]
                 test_line = current_line + char
                 bbox = draw.textbbox((0, 0), test_line, font=font)
                 
                 if bbox[2] - bbox[0] <= max_width:
                     current_line = test_line
+                    i += 1
                 else:
-                    if current_line:
+                    # 如果当前行为空，强制添加字符避免无限循环
+                    if not current_line:
+                        current_line = char
+                        i += 1
+                    
+                    # 尝试在合适的位置断行
+                    break_pos = self.find_break_position(current_line)
+                    if break_pos > 0 and break_pos < len(current_line):
+                        # 在找到的位置断行
+                        lines.append(current_line[:break_pos])
+                        current_line = current_line[break_pos:]
+                        # 不增加i，重新检查当前字符
+                    else:
+                        # 没找到合适断点，在当前位置断行
                         lines.append(current_line)
-                    current_line = char
+                        current_line = ''
+                        # 不增加i，重新处理当前字符
             
             if current_line:
                 lines.append(current_line)
         
         return '\n'.join(lines)
+    
+    def find_break_position(self, text):
+        """找到合适的断行位置"""
+        # 中文标点符号
+        chinese_punctuation = '，。！？；：、""''（）【】《》'
+        # 英文标点符号和空格
+        english_breaks = ' ,.!?;:'
+        
+        # 从后往前找断点
+        for i in range(len(text) - 1, -1, -1):
+            char = text[i]
+            if char in chinese_punctuation:
+                return i + 1  # 在标点后断行
+            elif char in english_breaks:
+                return i + 1  # 在标点或空格后断行
+        
+        # 如果没找到标点，在3/4位置断行
+        return int(len(text) * 0.75) if len(text) > 4 else len(text) - 1
     
     def format_time(self, pub_date):
         """格式化时间（将GMT时间转换为东八区时间）"""
@@ -529,7 +578,7 @@ class WeiboImageGenerator:
         
         temp_img = Image.new("RGB", (width, 1000), "white")
         draw = ImageDraw.Draw(temp_img)
-        text_bbox = draw.multiline_textbbox((0, 0), wrapped_content, font=self.content_font, spacing=8)
+        text_bbox = draw.multiline_textbbox((0, 0), wrapped_content, font=self.content_font, spacing=12)
         text_height = text_bbox[3] - text_bbox[1]
         
         # 计算配图区域高度
@@ -585,7 +634,7 @@ class WeiboImageGenerator:
             wrapped_content,
             font=self.content_font,
             fill="#1A1A1A",
-            spacing=8
+            spacing=12
         )
         
         # 绘制配图
