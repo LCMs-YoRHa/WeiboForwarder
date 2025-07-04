@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 import re
 import math
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from html import unescape
 from font_manager import ensure_fonts
 
@@ -19,28 +19,6 @@ from font_manager import ensure_fonts
 # 配置
 FONT_PATH = ensure_fonts()  # 使用字体管理器获取字体路径
 OUTPUT_DIR = "outputs"
-
-# 演示用的RSS XML数据
-DEMO_RSS_XML = '''<?xml version="1.0" encoding="UTF-8"?>
-<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
-<channel>
-<title>微博RSS演示</title>
-<link>https://weibo.com/demo</link>
-<description>演示用RSS数据</description>
-<image>
-<url>https://tvax2.sinaimg.cn/crop.0.0.310.310.180/735bcd72ly8ft3nr06beej208m08m749.jpg</url>
-<title>演示用户</title>
-</image>
-<item>
-<title>这是一条演示微博</title>
-<description><![CDATA[这是一条演示微博，用于测试长图生成功能。<br><br><img style="" src="https://tvax3.sinaimg.cn/large/0026YIXUgy1i320w2kuxej60nv0xcaji02.jpg" referrerpolicy="no-referrer">]]></description>
-<link>https://weibo.com/demo/test001</link>
-<guid isPermaLink="false">https://weibo.com/demo/test001</guid>
-<pubDate>Fri, 04 Jul 2025 12:00:00 GMT</pubDate>
-<author>演示用户</author>
-</item>
-</channel>
-</rss>'''
 
 
 class RSSWeiboParser:
@@ -432,13 +410,33 @@ class WeiboImageGenerator:
         return '\n'.join(lines)
     
     def format_time(self, pub_date):
-        """格式化时间"""
+        """格式化时间（将GMT时间转换为东八区时间）"""
         try:
             # RSS时间格式: Fri, 04 Jul 2025 07:51:28 GMT
             dt = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
-            return dt.strftime("%Y年%m月%d日 %H:%M")
-        except:
-            return pub_date
+            
+            # 将GMT时间转换为东八区时间（UTC+8）
+            import pytz
+            gmt = pytz.timezone('GMT')
+            beijing = pytz.timezone('Asia/Shanghai')
+            
+            # 如果dt没有时区信息，先设置为GMT
+            if dt.tzinfo is None:
+                dt = gmt.localize(dt)
+            
+            # 转换为北京时间
+            beijing_time = dt.astimezone(beijing)
+            
+            return beijing_time.strftime("%Y年%m月%d日 %H:%M")
+        except Exception as e:
+            # 如果转换失败，尝试简单的+8小时处理
+            try:
+                dt = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
+                # 简单加8小时
+                beijing_time = dt + timedelta(hours=8)
+                return beijing_time.strftime("%Y年%m月%d日 %H:%M")
+            except:
+                return pub_date
     
     def generate_screenshot(self, channel_info, weibo_item, filename=None, output_prefix=None):
         """生成微博截图"""
@@ -453,12 +451,19 @@ class WeiboImageGenerator:
         single_image_size = (600, 600)  # 单张图片的正方形尺寸
         grid_image_size = (200, 200)    # 网格图片的正方形尺寸
         
-        # 生成文件名
+        # 生成规范的文件名：weibo_频道uid_帖子id_日期_时间（东八区）
         if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            safe_id = weibo_item.get('id', 'unknown')[:10]
-            prefix = output_prefix if output_prefix else "weibo"
-            filename = f"{prefix}_{safe_id}_{timestamp}.jpg"
+            # 提取频道UID
+            channel_uid = self.extract_channel_uid(channel_info)
+            
+            # 提取帖子ID
+            post_id = self.extract_post_id(weibo_item)
+            
+            # 获取东八区时间
+            beijing_datetime = self.get_beijing_datetime(weibo_item.get('pub_date', ''))
+            
+            # 生成文件名
+            filename = f"weibo_{channel_uid}_{post_id}_{beijing_datetime}.jpg"
         
         output_path = os.path.join(OUTPUT_DIR, filename)
         
@@ -623,26 +628,132 @@ class WeiboImageGenerator:
         print(f"📊 图片信息: {width}x{total_height}px")
         
         return output_path
+    
+    def extract_channel_uid(self, channel_info):
+        """提取频道UID"""
+        try:
+            # 从频道链接中提取UID
+            link = channel_info.get('link', '')
+            if '/u/' in link:
+                # 格式：https://weibo.com/u/1234567890
+                uid = link.split('/u/')[-1].split('?')[0].split('/')[0]
+                return uid[:10]  # 限制长度
+            elif 'weibo.com/' in link:
+                # 其他格式尝试提取数字ID
+                import re
+                numbers = re.findall(r'\d+', link)
+                if numbers:
+                    return numbers[0][:10]
+            
+            # 如果无法提取，使用频道标题的哈希
+            title = channel_info.get('title', 'unknown')
+            return str(abs(hash(title)))[:8]
+        except:
+            return "unknown"
+    
+    def extract_post_id(self, weibo_item):
+        """提取微博博文ID（如：PzAWQejXh）"""
+        try:
+            import re
+            
+            # 从link中提取微博博文ID
+            link = weibo_item.get('link', '')
+            if link:
+                # 匹配微博博文ID格式：通常是字母数字组合，长度7-12位
+                # 格式如：https://weibo.com/1234567890/PzAWQejXh
+                # 或：https://weibo.com/u/1234567890/PzAWQejXh
+                weibo_id_patterns = [
+                    r'/([A-Za-z0-9]{7,12})(?:\?|$|#)',  # 路径末尾的ID
+                    r'/([A-Za-z0-9]{7,12})/',           # 路径中间的ID
+                    r'id=([A-Za-z0-9]{7,12})',          # 参数中的ID
+                ]
+                
+                for pattern in weibo_id_patterns:
+                    match = re.search(pattern, link)
+                    if match:
+                        post_id = match.group(1)
+                        # 验证是否为有效的微博ID格式（包含字母和数字）
+                        if re.match(r'^[A-Za-z0-9]{7,12}$', post_id) and re.search(r'[A-Za-z]', post_id):
+                            return post_id
+            
+            # 从guid中提取
+            guid = weibo_item.get('guid', '')
+            if guid:
+                for pattern in weibo_id_patterns:
+                    match = re.search(pattern, guid)
+                    if match:
+                        post_id = match.group(1)
+                        if re.match(r'^[A-Za-z0-9]{7,12}$', post_id) and re.search(r'[A-Za-z]', post_id):
+                            return post_id
+            
+            # 如果无法从链接提取，查找任何符合微博ID格式的字符串
+            all_text = f"{link} {guid} {weibo_item.get('title', '')} {weibo_item.get('description', '')}"
+            weibo_ids = re.findall(r'\b([A-Za-z0-9]{7,12})\b', all_text)
+            for post_id in weibo_ids:
+                if re.search(r'[A-Za-z]', post_id) and re.search(r'[0-9]', post_id):
+                    return post_id
+            
+            # 最终备用：使用内容生成短哈希ID（模拟微博ID格式）
+            title = weibo_item.get('title', '')
+            content = weibo_item.get('description', '')
+            pub_date = weibo_item.get('pub_date', '')
+            text = (title + content + pub_date)[:200]
+            hash_value = abs(hash(text))
+            
+            # 转换为类似微博ID的格式（字母+数字组合）
+            chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+            result = ''
+            for _ in range(9):  # 生成9位ID
+                result += chars[hash_value % len(chars)]
+                hash_value //= len(chars)
+            return result
+            
+        except Exception as e:
+            return "unknown"
+    
+    def get_beijing_datetime(self, pub_date):
+        """获取北京时间格式的日期时间字符串"""
+        try:
+            if not pub_date:
+                # 如果没有发布时间，使用当前北京时间
+                import pytz
+                beijing = pytz.timezone('Asia/Shanghai')
+                now = datetime.now(beijing)
+                return now.strftime("%Y%m%d_%H%M%S")
+            
+            # 解析GMT时间并转换为北京时间
+            dt = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
+            
+            # 转换为北京时间
+            import pytz
+            gmt = pytz.timezone('GMT')
+            beijing = pytz.timezone('Asia/Shanghai')
+            
+            if dt.tzinfo is None:
+                dt = gmt.localize(dt)
+            
+            beijing_time = dt.astimezone(beijing)
+            return beijing_time.strftime("%Y%m%d_%H%M%S")
+        except:
+            # 备用方案：简单加8小时
+            try:
+                dt = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
+                beijing_time = dt + timedelta(hours=8)
+                return beijing_time.strftime("%Y%m%d_%H%M%S")
+            except:
+                # 最终备用：使用当前时间
+                return datetime.now().strftime("%Y%m%d_%H%M%S")
 
 
-def get_demo_data():
-    """获取演示数据"""
-    channel_info, weibo_items = RSSWeiboParser.parse_rss_xml(DEMO_RSS_XML)
-    return channel_info, weibo_items
-
-
-def create_weibo_image(rss_url=None, index=0, output_filename=None, use_demo=False):
+def create_weibo_image(rss_url, index=0, output_filename=None):
     """创建微博长图的便捷函数"""
     # 获取数据
-    if use_demo:
-        print("📋 使用演示数据...")
-        xml_content = DEMO_RSS_XML
-    else:
-        if not rss_url:
-            raise ValueError("需要提供RSS URL或使用演示模式")
-        xml_content = RSSWeiboParser.fetch_rss_data(rss_url)
-        if not xml_content:
-            raise Exception("无法获取RSS数据")
+    if not rss_url:
+        raise ValueError("需要提供RSS URL")
+    
+    xml_content = RSSWeiboParser.fetch_rss_data(rss_url)
+    if not xml_content:
+        raise Exception("无法获取RSS数据")
     
     # 解析数据
     channel_info, weibo_items = RSSWeiboParser.parse_rss_xml(xml_content)

@@ -11,12 +11,6 @@ services:
       - ./data:/app/data
     env_file:
       - .env
-    environment:
-      # 默认配置（可在.env文件中覆盖）
-      CHECK_INTERVAL: ${CHECK_INTERVAL:-300}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      MAX_RETRIES: ${MAX_RETRIES:-3}
-      TIMEOUT: ${TIMEOUT:-30}
     networks:
       - weibo-network
     healthcheck:

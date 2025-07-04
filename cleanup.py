@@ -228,5 +228,4 @@ def run_cleanup():
     
     logger.info(f"🎉 清理任务完成: 总共删除 {total_deleted} 个文件，释放 {total_size:.2f}MB 空间")
 
-if __name__ == "__main__":
-    run_cleanup()
+

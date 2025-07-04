@@ -95,12 +95,4 @@ def list_available_fonts():
     else:
         print("🎯 当前使用字体: 系统默认")
 
-if __name__ == "__main__":
-    # 测试字体获取
-    list_available_fonts()
-    print()
-    font_path = ensure_fonts()
-    if font_path:
-        print(f"🎉 字体就绪: {font_path}")
-    else:
-        print("❌ 字体初始化失败")
+

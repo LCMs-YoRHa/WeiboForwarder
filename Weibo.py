@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """
-基于RSS的微博长图生成器
+基于RSS的微博长图生成器 - 命令行工具
 通过RSS服务获取微博数据，生成美观的长图
 """
 
 import argparse
-from create import RSSWeiboParser, WeiboImageGenerator, DEMO_RSS_XML, get_demo_data, create_weibo_image
-from push import WeComNotifier, push_image_file
+from create import RSSWeiboParser, WeiboImageGenerator
+from push import push_image_file
 
 
 # 配置
-RSS_URL = "http://68.64.177.186:1200/weibo/user/1195908387"  # 请修改为你的RSS服务地址
+RSS_URL = "http://68.64.177.186:1200/weibo/user/1935396210"  # 请修改为你的RSS服务地址
 
 # 企业微信配置（默认为空，需要通过配置文件或命令行参数提供）
 WECOM_CONFIG = {}
@@ -32,7 +32,6 @@ def main():
     parser.add_argument("--index", type=int, default=0, help="选择第几条微博 (从0开始)")
     parser.add_argument("--list", action="store_true", help="列出所有微博")
     parser.add_argument("--output", help="输出文件名")
-    parser.add_argument("--demo", action="store_true", help="使用演示数据")
     
     # 企业微信推送参数
     parser.add_argument("--push", action="store_true", help="推送到企业微信")
@@ -49,15 +48,10 @@ def main():
     print("="*50)
     
     # 获取RSS数据
-    if args.demo:
-        print("📋 使用演示数据...")
-        xml_content = DEMO_RSS_XML
-    else:
-        xml_content = RSSWeiboParser.fetch_rss_data(args.rss_url)
-        if not xml_content:
-            print("❌ 无法获取RSS数据")
-            print("💡 提示：可以使用 --demo 参数运行演示模式")
-            return
+    xml_content = RSSWeiboParser.fetch_rss_data(args.rss_url)
+    if not xml_content:
+        print("❌ 无法获取RSS数据")
+        return
     
     # 解析RSS
     channel_info, weibo_items = RSSWeiboParser.parse_rss_xml(xml_content)

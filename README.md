@@ -55,14 +55,14 @@ pip install -r requirements.txt
 3. **运行程序**
 
 ```bash
-# 生成单张长图
-python Weibo.py --demo --index 0
+# 生成单张长图（需要配置RSS URL）
+python Weibo.py --rss-url http://your-rss-url --index 0
 
 # 列出所有微博
-python Weibo.py --demo --list
+python Weibo.py --rss-url http://your-rss-url --list
 
 # 实时监听模式
-python test_monitor.py
+python monitor.py
 ```
 
 ## 📋 功能模块
@@ -108,7 +108,6 @@ weibo-rss-monitor/
 ├── push.py                # 企业微信推送模块
 ├── monitor.py             # 实时监听服务
 ├── Weibo.py               # 命令行工具
-├── test_monitor.py        # 测试脚本
 ├── font_manager.py        # 字体管理模块
 ├── cleanup.py             # 自动清理模块
 ├── manual_cleanup.sh      # 手动清理脚本
@@ -129,14 +128,11 @@ weibo-rss-monitor/
 ### 命令行工具
 
 ```bash
-# 使用演示数据生成长图
-python Weibo.py --demo --index 0
-
-# 从实际RSS源生成长图
+# 从RSS源生成长图
 python Weibo.py --rss-url http://your-rss-url --index 0
 
 # 自动推送到企业微信（需配置）
-python Weibo.py --demo --index 0 --push
+python Weibo.py --rss-url http://your-rss-url --index 0 --push
 
 # 列出所有微博
 python Weibo.py --rss-url http://your-rss-url --list

@@ -176,11 +176,10 @@ class WeiboMonitor:
             
             logging.info(f"🎨 开始处理新微博: {item.get('content', '')[:50]}...")
             
-            # 生成长图
+            # 生成长图（使用新的规范命名）
             output_file = self.image_generator.generate_screenshot(
                 channel_info, 
-                item,
-                output_prefix=f"auto_{item['item_id'][:8]}"
+                item
             )
             
             logging.info(f"✅ 长图生成成功: {output_file}")
