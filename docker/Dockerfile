@@ -8,7 +8,6 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1
 ENV TZ=Asia/Shanghai
 
-# 跳过系统依赖安装（使用项目内置字体，Python基础镜像已足够）
 
 # 复制requirements文件
 COPY requirements.txt .
@@ -23,7 +22,7 @@ COPY sources/ ./
 RUN mkdir -p /app/outputs /app/logs /app/data
 
 # 设置权限
-RUN chmod +x /app/*.py /app/*.sh
+RUN chmod +x /app/*.py
 
 # 启动命令
 CMD ["python", "monitor.py"]

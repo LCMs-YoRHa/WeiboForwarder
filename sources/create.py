@@ -221,13 +221,13 @@ class WeiboImageGenerator:
         os.makedirs(OUTPUT_DIR, exist_ok=True)
     
     def setup_fonts(self):
-        """设置字体（高清版）"""
+        """设置字体（超高清版）"""
         try:
             if FONT_PATH:
-                self.name_font = ImageFont.truetype(FONT_PATH, 44)  # 用户名字体更大
-                self.time_font = ImageFont.truetype(FONT_PATH, 32)  # 时间字体更大
-                self.content_font = ImageFont.truetype(FONT_PATH, 40)  # 正文字体更大
-                print("✅ 高清字体加载成功")
+                self.name_font = ImageFont.truetype(FONT_PATH, 70)  # 用户名字体更大
+                self.time_font = ImageFont.truetype(FONT_PATH, 50)  # 时间字体更大
+                self.content_font = ImageFont.truetype(FONT_PATH, 64)  # 正文字体更大
+                print("✅ 超高清字体加载成功")
             else:
                 raise Exception("字体路径为空")
         except Exception as e:
@@ -237,33 +237,163 @@ class WeiboImageGenerator:
             self.content_font = ImageFont.load_default()
     
     def download_image(self, url, square_size=None, force_size=None):
-        """下载图片，可选择裁剪为正方形或强制调整尺寸"""
+        """下载图片，智能获取最佳分辨率版本"""
+        if not url:
+            return self.create_placeholder_image(force_size or square_size or (640, 640))
+            
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Referer': 'https://weibo.com/'
+        }
+        
+        # 尝试多个URL策略
+        urls_to_try = []
+        
+        # 1. 高分辨率URL
+        high_res_url = self.get_high_resolution_url(url)
+        if high_res_url != url:
+            urls_to_try.append(('高分辨率', high_res_url))
+        
+        # 2. 原始URL  
+        urls_to_try.append(('原始', url))
+        
+        # 3. 如果是crop URL，尝试直接去掉crop参数
+        if '/crop.' in url:
+            try:
+                # 简单去掉crop参数的方法
+                base_url = url.split('/crop.')[0]
+                filename = url.split('/')[-1]
+                simple_url = f"{base_url}/{filename}"
+                urls_to_try.append(('去crop', simple_url))
+            except:
+                pass
+        
+        # 依次尝试不同的URL
+        for desc, test_url in urls_to_try:
+            try:
+                response = requests.get(test_url, headers=headers, timeout=15)
+                response.raise_for_status()
+                
+                img = Image.open(BytesIO(response.content)).convert("RGB")
+                print(f"📷 {desc}图片获取成功: {img.size[0]}x{img.size[1]}px")
+                
+                # 处理图片尺寸
+                if force_size:
+                    img = img.resize(force_size, Image.Resampling.LANCZOS)
+                elif square_size:
+                    img = self.crop_to_square(img, square_size)
+                
+                return img
+                
+            except requests.exceptions.RequestException as e:
+                if "404" in str(e):
+                    print(f"⚠️ {desc}图片不存在 (404): {test_url[:80]}...")
+                else:
+                    print(f"⚠️ {desc}图片下载失败: {str(e)[:100]}...")
+                continue
+            except Exception as e:
+                print(f"⚠️ {desc}图片处理失败: {str(e)[:100]}...")
+                continue
+        
+        # 所有URL都失败，创建占位图片
+        print(f"❌ 所有图片URL都无法访问，使用占位图片")
+        return self.create_placeholder_image(force_size or square_size or (640, 640))
+    
+    def create_placeholder_image(self, size):
+        """创建占位图片"""
+        if isinstance(size, tuple):
+            width, height = size
+        else:
+            width = height = size
+            
+        placeholder = Image.new("RGB", (width, height), "#F0F0F0")
+        draw = ImageDraw.Draw(placeholder)
+        
+        # 绘制一个简单的图标
+        center_x, center_y = width // 2, height // 2
+        icon_size = min(width, height) // 4
+        
+        # 绘制相机图标
+        draw.rectangle([
+            center_x - icon_size, center_y - icon_size//2,
+            center_x + icon_size, center_y + icon_size//2
+        ], fill="#CCCCCC", outline="#999999")
+        
+        draw.ellipse([
+            center_x - icon_size//2, center_y - icon_size//2,
+            center_x + icon_size//2, center_y + icon_size//2
+        ], fill="#999999", outline="#666666")
+        
+        # 添加文字
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Referer': 'https://weibo.com/'
-            }
-            response = requests.get(url, headers=headers, timeout=10)
-            response.raise_for_status()
+            font_size = max(12, min(width, height) // 20)
+            if hasattr(self, 'content_font'):
+                font = ImageFont.truetype(self.content_font.path, font_size)
+            else:
+                font = ImageFont.load_default()
+            draw.text((center_x, center_y + icon_size), "图片加载失败", 
+                     fill="#666666", font=font, anchor="mt")
+        except:
+            pass
             
-            img = Image.open(BytesIO(response.content)).convert("RGB")
+        return placeholder
+
+    def get_high_resolution_url(self, url):
+        """尝试获取高分辨率图片URL - 改进版"""
+        if not url:
+            return url
             
-            if force_size:
-                # 强制调整为指定尺寸（用于头像）
-                img = img.resize(force_size, Image.Resampling.LANCZOS)
-            elif square_size:
-                # 裁剪为正方形
-                img = self.crop_to_square(img, square_size)
+        # 微博图片URL规律分析和处理
+        if 'sinaimg.cn' in url:
+            # 对于包含crop参数的URL（如头像），直接移除crop参数
+            if '/crop.' in url:
+                # 移除crop参数，获取原始图片
+                # 例：https://tvax2.sinaimg.cn/crop.0.0.310.310.180/735bcd72ly8ft3nr06beej208m08m749.jpg
+                # 转为：https://tvax2.sinaimg.cn/735bcd72ly8ft3nr06beej208m08m749.jpg
+                parts = url.split('/crop.')
+                if len(parts) >= 2:
+                    # 找到文件名部分
+                    after_crop = parts[1]
+                    filename_start = after_crop.find('/')
+                    if filename_start != -1:
+                        filename = after_crop[filename_start + 1:]
+                        base_url = parts[0]
+                        # 尝试large尺寸
+                        high_res_url = f"{base_url}/large/{filename}"
+                        return high_res_url
             
-            return img
-        except Exception as e:
-            print(f"⚠️ 图片下载失败: {url[:50]}... 错误: {e}")
-            # 创建占位图片
-            placeholder_size = force_size or square_size or (300, 300)
-            placeholder = Image.new("RGB", placeholder_size, "#E0E0E0")
-            draw = ImageDraw.Draw(placeholder)
-            draw.text((10, 10), "图片\n加载失败", fill="#666666", font=self.content_font)
-            return placeholder
+            # 对于已经包含orj360的URL，避免重复添加
+            if '/orj360/orj360/' in url:
+                # 移除重复的orj360
+                url = url.replace('/orj360/orj360/', '/orj360/')
+                return url
+            
+            # 对于普通的微博图片URL进行尺寸升级
+            size_mappings = [
+                ('/thumbnail/', '/large/'),
+                ('/bmiddle/', '/large/'),
+                ('/small/', '/large/'),
+                ('/square/', '/large/'),
+                ('/orj480/', '/large/'),  # 避免使用可能不存在的orj360
+            ]
+            
+            for old_size, new_size in size_mappings:
+                if old_size in url:
+                    return url.replace(old_size, new_size)
+            
+            # 如果没有找到已知的尺寸标识，尝试添加large
+            if '/large/' not in url and '/orj360/' not in url:
+                # 检查URL结构，在域名后添加large
+                import re
+                match = re.match(r'(https?://[^/]+/)(.+)', url)
+                if match:
+                    domain_part, path_part = match.groups()
+                    # 如果路径不是以尺寸标识开始，添加large
+                    if not re.match(r'^(large|orj360|thumbnail|bmiddle|small|square)/', path_part):
+                        return f"{domain_part}large/{path_part}"
+        
+        # 对于其他图片源，返回原URL
+        return url
     
     def resize_keep_ratio(self, img, max_size):
         """保持比例调整图片大小"""
@@ -320,9 +450,19 @@ class WeiboImageGenerator:
         return result.convert('RGB')
     
     def crop_to_square(self, img, size):
-        """从中心裁剪图片为正方形"""
+        """从中心裁剪图片为正方形，优化高分辨率处理"""
         original_width, original_height = img.size
         target_size = size[0]  # 目标正方形边长
+        
+        # 如果原图已经很小，先放大再处理
+        min_dimension = min(original_width, original_height)
+        if min_dimension < target_size:
+            # 放大到至少目标尺寸的1.5倍，确保质量
+            scale_factor = (target_size * 1.5) / min_dimension
+            new_width = int(original_width * scale_factor)
+            new_height = int(original_height * scale_factor)
+            img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+            original_width, original_height = new_width, new_height
         
         # 计算裁剪区域，从中心开始
         if original_width > original_height:
@@ -489,15 +629,15 @@ class WeiboImageGenerator:
     
     def generate_screenshot(self, channel_info, weibo_item, filename=None, output_prefix=None):
         """生成微博截图（高清版）"""
-        # 设置高清画布参数
-        width = 1500
-        margin = 40
-        padding = 50
-        spacing = 30
-        image_spacing = 50  # 文字和图片之间的间距
-        avatar_size = (120, 120)
-        single_image_size = (1200, 1200)  # 单张图片的正方形尺寸
-        grid_image_size = (400, 400)    # 网格图片的正方形尺寸
+        # 设置超高清画布参数
+        width = 2400
+        margin = 64
+        padding = 80
+        spacing = 48
+        image_spacing = 80  # 文字和图片之间的间距
+        avatar_size = (192, 192)
+        single_image_size = (1920, 1920)  # 单张图片的正方形尺寸
+        grid_image_size = (640, 640)    # 网格图片的正方形尺寸
         
         # 生成规范的文件名：weibo_频道uid_帖子id_日期_时间（东八区）
         if not filename:
@@ -554,15 +694,22 @@ class WeiboImageGenerator:
         
         # 下载视频封面
         if weibo_item.get('video_info') and weibo_item['video_info'].get('poster'):
-            print("📹 下载视频封面...")
+            print("📹 下载高分辨率视频封面...")
             if is_video_only:
-                # 纯视频微博：保持原始比例，但限制最大宽度（确保左右边距相等）
+                # 纯视频微博：保持原始比例，但限制最大宽度
                 max_video_width = width - 2 * (margin + padding)
                 video_poster = self.download_image(weibo_item['video_info']['poster'], force_size=None)
+                # 如果原图分辨率太小，智能放大
+                if video_poster.size[0] < max_video_width * 0.8:
+                    scale_factor = max_video_width / video_poster.size[0]
+                    new_width = int(video_poster.size[0] * scale_factor)
+                    new_height = int(video_poster.size[1] * scale_factor)
+                    video_poster = video_poster.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    print(f"📈 视频封面智能放大到: {new_width}x{new_height}px")
                 # 按比例缩放，保持宽高比
                 video_poster = self.resize_keep_ratio(video_poster, (max_video_width, max_video_width))
             else:
-                # 混合媒体：裁剪为正方形
+                # 混合媒体：裁剪为正方形高分辨率
                 video_poster = self.download_image(weibo_item['video_info']['poster'], square_size=target_size)
             
             if video_poster:
@@ -577,7 +724,7 @@ class WeiboImageGenerator:
         
         temp_img = Image.new("RGB", (width, 1000), "white")
         draw = ImageDraw.Draw(temp_img)
-        text_bbox = draw.multiline_textbbox((0, 0), wrapped_content, font=self.content_font, spacing=12)
+        text_bbox = draw.multiline_textbbox((0, 0), wrapped_content, font=self.content_font, spacing=20)
         text_height = text_bbox[3] - text_bbox[1]
         
         # 计算配图区域高度
@@ -594,7 +741,7 @@ class WeiboImageGenerator:
                 # 多张图片，网格布局，固定正方形尺寸
                 cols = min(3, len(images))
                 rows = math.ceil(len(images) / cols)
-                gap = 8
+                gap = 12  # 增加网格间距
                 image_area_height = rows * grid_image_size[1] + (rows - 1) * gap + image_spacing
         
         # 计算总高度
@@ -629,13 +776,13 @@ class WeiboImageGenerator:
         draw.text((name_x, time_y), formatted_time, font=self.time_font, fill="#666666")
         
         # 绘制正文内容 - 使用更深的颜色增强可读性
-        content_y = margin + padding + header_height + 10
+        content_y = margin + padding + header_height + 16
         draw.multiline_text(
             (margin + padding, content_y),
             wrapped_content,
             font=self.content_font,
             fill="#1A1A1A",
-            spacing=12
+            spacing=20
         )
         
         # 绘制配图
@@ -671,10 +818,10 @@ class WeiboImageGenerator:
                     
                     canvas.paste(image, (x, y))
         
-        # 保存图片（高清DPI）
-        canvas.save(output_path, quality=95, optimize=True, dpi=(300, 300))
-        print(f"✅ 高清长图生成成功: {output_path}")
-        print(f"📊 图片信息: {width}x{total_height}px (DPI 300)")
+        # 保存图片（超高清DPI）
+        canvas.save(output_path, quality=98, optimize=True, dpi=(400, 400))
+        print(f"✅ 超高清长图生成成功: {output_path}")
+        print(f"📊 图片信息: {width}x{total_height}px (DPI 400)")
         
         return output_path
     
