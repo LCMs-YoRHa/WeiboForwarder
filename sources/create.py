@@ -221,13 +221,13 @@ class WeiboImageGenerator:
         os.makedirs(OUTPUT_DIR, exist_ok=True)
     
     def setup_fonts(self):
-        """设置字体"""
+        """设置字体（高清版）"""
         try:
             if FONT_PATH:
-                self.name_font = ImageFont.truetype(FONT_PATH, 22)  # 用户名字体稍大
-                self.time_font = ImageFont.truetype(FONT_PATH, 16)  # 时间字体
-                self.content_font = ImageFont.truetype(FONT_PATH, 20)  # 正文字体增大
-                print("✅ 字体加载成功")
+                self.name_font = ImageFont.truetype(FONT_PATH, 44)  # 用户名字体更大
+                self.time_font = ImageFont.truetype(FONT_PATH, 32)  # 时间字体更大
+                self.content_font = ImageFont.truetype(FONT_PATH, 40)  # 正文字体更大
+                print("✅ 高清字体加载成功")
             else:
                 raise Exception("字体路径为空")
         except Exception as e:
@@ -488,17 +488,16 @@ class WeiboImageGenerator:
                 return pub_date
     
     def generate_screenshot(self, channel_info, weibo_item, filename=None, output_prefix=None):
-        """生成微博截图"""
-        
-        # 设置画布参数
-        width = 750
-        margin = 20
-        padding = 25
-        spacing = 15
-        image_spacing = 25  # 文字和图片之间的间距，比普通spacing大
-        avatar_size = (60, 60)
-        single_image_size = (600, 600)  # 单张图片的正方形尺寸
-        grid_image_size = (200, 200)    # 网格图片的正方形尺寸
+        """生成微博截图（高清版）"""
+        # 设置高清画布参数
+        width = 1500
+        margin = 40
+        padding = 50
+        spacing = 30
+        image_spacing = 50  # 文字和图片之间的间距
+        avatar_size = (120, 120)
+        single_image_size = (1200, 1200)  # 单张图片的正方形尺寸
+        grid_image_size = (400, 400)    # 网格图片的正方形尺寸
         
         # 生成规范的文件名：weibo_频道uid_帖子id_日期_时间（东八区）
         if not filename:
@@ -621,9 +620,11 @@ class WeiboImageGenerator:
         # 用户名 - 使用更深的颜色增强对比度
         author_name = weibo_item.get('author', '未知用户')
         draw.text((name_x, name_y), author_name, font=self.name_font, fill="#1A1A1A")
-        
-        # 发布时间
-        time_y = name_y + 28
+        # 动态计算用户名底部
+        name_bbox = draw.textbbox((name_x, name_y), author_name, font=self.name_font)
+        name_bottom = name_bbox[1] + (name_bbox[3] - name_bbox[1])
+        # 发布时间，紧跟在用户名下方，留足间距
+        time_y = name_bottom + 10  # 10像素额外间距
         formatted_time = self.format_time(weibo_item.get('pub_date', ''))
         draw.text((name_x, time_y), formatted_time, font=self.time_font, fill="#666666")
         
@@ -670,11 +671,10 @@ class WeiboImageGenerator:
                     
                     canvas.paste(image, (x, y))
         
-        # 保存图片
-        canvas.save(output_path, quality=95, optimize=True)
-        
-        print(f"✅ 长图生成成功: {output_path}")
-        print(f"📊 图片信息: {width}x{total_height}px")
+        # 保存图片（高清DPI）
+        canvas.save(output_path, quality=95, optimize=True, dpi=(300, 300))
+        print(f"✅ 高清长图生成成功: {output_path}")
+        print(f"📊 图片信息: {width}x{total_height}px (DPI 300)")
         
         return output_path
     
