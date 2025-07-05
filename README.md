@@ -12,21 +12,21 @@
 - 📊 **去重机制**: 自动记录已处理的微博，避免重复推送
 - 🎭 **中文字体**: Docker环境下完整的中文字体支持
 - 🧹 **自动清理**: 推送成功后1天自动删除图片，节省存储空间
+- 🗂️ **智能管理**: 自动清理过期的seen_items记录，防止文件过大
 
 ## 🚀 快速开始
 
-### Docker Compose 部署（唯一支持方式）
+### Docker Compose 部署
 
 ```bash
 # 下载项目
-git clone <repository-url>
 cd weibo-rss-monitor
 
 # 配置环境变量
 cp .env.example .env
 # 编辑 .env 文件，填入你的配置
-notepad .env  # Windows
-# 或 nano .env  # Linux/macOS
+
+ vim .env  # Linux
 
 # 启动服务
 docker-compose up -d --build
@@ -41,19 +41,6 @@ docker-compose logs -f
 docker-compose down
 ```
 
-## 📋 功能模块
-
-### 核心模块
-
-- **`create.py`**: RSS解析和长图生成
-- **`push.py`**: 企业微信推送
-- **`monitor.py`**: 实时监听服务
-- **`Weibo.py`**: 命令行工具
-
-### Docker支持
-
-- **`Dockerfile`**: Docker镜像定义
-- **`docker-compose.yml`**: 服务编排
 
 ## 🛠️ 配置说明
 
@@ -88,38 +75,26 @@ RSS_URLS=http://your-server-ip:1200/weibo/user/123456,https://rsshub.app/weibo/u
 ```bash
 WECOM_CORPID=ww1234567890abcdef  # 企业ID
 WECOM_CORPSECRET=your_secret_here  # 应用密钥
-WECOM_AGENTID=1000002  # 应用ID
+WECOM_AGENTID=1000001  # 应用ID
 WECOM_TOUSER=@all  # 接收者
 ```
 
+### seen_items.json 自动清理配置
+
+```bash
+# seen_items.json 自动清理配置
+SEEN_ITEMS_MAX_COUNT_PER_CHANNEL=50  # 每个频道最多保留50条记录
+SEEN_ITEMS_CLEANUP_INTERVAL=7        # 每7天清理一次seen_items.json
+```
+
+**说明**:
+- `seen_items.json` 用于记录已处理的微博，防止重复推送
+- 系统会自动按频道ID分组，每个频道最多保留50条最新记录
+- 超过50条的旧记录会被自动删除，保持文件大小合理
+- 清理是安全的，只会删除旧记录，不会影响防重复功能
+
 获取企业微信配置的详细步骤请参考 `wecom_config.py` 文件中的说明。
 
-## 📁 项目结构
-
-```
-weibo-rss-monitor/
-├── sources/               # 源码目录
-│   ├── create.py          # 长图生成模块
-│   ├── push.py            # 企业微信推送模块
-│   ├── monitor.py         # 实时监听服务
-│   ├── Weibo.py           # 命令行工具
-│   ├── font_manager.py    # 字体管理模块
-│   ├── cleanup.py         # 自动清理模块
-│   ├── wecom_config.py    # 企业微信配置
-│   └── fonts/            # 字体文件目录
-├── docker/               # Docker相关文件
-│   ├── Dockerfile        # Docker镜像定义
-│   ├── .dockerignore     # Docker忽略文件
-│   └── healthcheck.py    # 健康检查脚本
-├── docker-compose.yml    # Docker编排文件
-├── .env.example          # 配置模板
-├── .env                  # 配置文件（需要创建）
-├── requirements.txt      # Python依赖
-├── outputs/              # 输出图片目录
-├── logs/                 # 日志目录
-├── data/                 # 数据目录
-└── README.md            # 项目说明
-```
 
 ## 🔧 服务管理
 
@@ -151,27 +126,31 @@ docker-compose restart
 
 # 停止服务
 docker-compose down
-```
 
-### 编程接口
-
-```python
-from create import create_weibo_image
-from push import push_image_file
-
-# 生成长图
-image_file = create_weibo_image(rss_url, weibo_index=0)
-
-# 推送到企业微信
-success = push_image_file(image_file, corpid="...", corpsecret="...", agentid=123)
-```
 
 ## 📊 监控和日志
 
-### 日志文件
 
-- `logs/weibo_monitor.log`: 监听服务日志
-- `data/seen_items.json`: 已处理微博记录
+### 自动清理
+系统会根据配置自动清理seen_items记录：
+- 按频道分组：每个频道独立管理记录
+- 数量限制：每个频道最多保留50条最新记录
+- 清理频率：每7天检查一次
+
+### 手动管理
+```bash
+# 进入容器
+docker exec -it WeiboForwarder bash
+
+# 查看统计信息（包含频道分布）
+python /app/sources/manage_seen_items.py stats
+
+# 列出所有频道
+python /app/sources/manage_seen_items.py channels
+
+# 备份当前文件
+python /app/sources/manage_seen_items.py backup
+```
 
 ### 健康检查
 
@@ -241,8 +220,15 @@ docker exec WeiboForwarder ping rsshub
    - 确认字体文件是否存在
 
 4. **重复推送**
-   - 删除 `data/seen_items.json` 重新开始
-   - 检查RSS源内容是否有变化
+   - 查看 `data/seen_items.json` 大小和记录数
+   - 如果文件过大，会自动清理过期记录
+   - 手动清理：`docker exec -it WeiboForwarder python /app/sources/manage_seen_items.py cleanup-days 30`
+   - 完全重新开始：删除 `data/seen_items.json` （会导致所有微博重新推送）
+
+5. **seen_items.json 文件过大**
+   - 系统会自动清理，每个频道最多保留50条记录
+   - 手动查看状态：`docker exec -it WeiboForwarder python /app/sources/manage_seen_items.py stats`
+   - 手动备份：`docker exec -it WeiboForwarder python /app/sources/manage_seen_items.py backup`
 
 ### 调试模式
 
@@ -262,12 +248,3 @@ docker-compose logs -f
 
 MIT License - 详见 [LICENSE](LICENSE) 文件
 
-## 🔗 相关链接
-
-- [Docker部署指南](DOCKER.md)
-- [模块化使用示例](模块化使用示例.md)
-- [快速开始指南](快速开始.md)
-
----
-
-**注意**: 首次运行时会自动下载字体文件，请确保网络连接正常。如果您在企业网络环境中，可能需要配置代理设置。

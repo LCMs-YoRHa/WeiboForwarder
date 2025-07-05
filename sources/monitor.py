@@ -9,7 +9,7 @@ import time
 import logging
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Set, Optional
 from create import RSSWeiboParser, WeiboImageGenerator
 from push import push_image_file
@@ -31,6 +31,10 @@ class Config:
         self.wecom_toparty = os.getenv('WECOM_TOPARTY', '')
         self.wecom_totag = os.getenv('WECOM_TOTAG', '')
         
+        # seen_items.json 清理配置
+        self.seen_items_max_count_per_channel = int(os.getenv('SEEN_ITEMS_MAX_COUNT_PER_CHANNEL', 50))
+        self.seen_items_cleanup_interval = int(os.getenv('SEEN_ITEMS_CLEANUP_INTERVAL', 7))
+        
         # 其他配置
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
         self.max_retries = int(os.getenv('MAX_RETRIES', 3))
@@ -51,7 +55,7 @@ class Config:
         value = os.getenv(key, '')
         if not value:
             return default
-        return [url.strip() for url in value.split(',') if url.strip()]
+        return [item.strip() for item in value.split(',') if item.strip()]
     
     def is_wecom_configured(self) -> bool:
         """检查企业微信是否配置完整"""
@@ -75,11 +79,15 @@ class WeiboMonitor:
     def __init__(self, config: Config):
         self.config = config
         self.seen_items: Set[str] = set()
+        self.seen_items_with_time: Dict[str, Dict] = {}  # 新增：保存item的时间戳和RSS源信息
         self.rss_parser = RSSWeiboParser()
         self.image_generator = WeiboImageGenerator()
         
         # 加载已见过的微博ID
         self._load_seen_items()
+        
+        # seen_items清理计数器
+        self.seen_cleanup_counter = 0
         
         # 设置日志
         self._setup_logging()
@@ -105,24 +113,142 @@ class WeiboMonitor:
             if os.path.exists(seen_file):
                 with open(seen_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    self.seen_items = set(data.get('seen_items', []))
+                    # 支持新的数据结构（包含时间戳）和旧的数据结构（只有ID列表）
+                    if isinstance(data, dict) and 'items' in data:
+                        # 新格式：{'items': [{'id': 'xxx', 'timestamp': 'xxx', 'rss_url': 'xxx'}], 'last_update': 'xxx'}
+                        items_data = data.get('items', [])
+                        self.seen_items = set(item['id'] for item in items_data if isinstance(item, dict) and 'id' in item)
+                        self.seen_items_with_time = {item['id']: {
+                            'timestamp': item.get('timestamp', datetime.now().isoformat()),
+                            'rss_url': item.get('rss_url', 'unknown'),
+                            'channel_uid': item.get('channel_uid', 'unknown')
+                        } for item in items_data if isinstance(item, dict) and 'id' in item}
+                    else:
+                        # 旧格式：{'seen_items': ['id1', 'id2'], 'last_update': 'xxx'} 或 ['id1', 'id2']
+                        old_items = data.get('seen_items', data) if isinstance(data, dict) else data
+                        self.seen_items = set(old_items) if isinstance(old_items, list) else set()
+                        # 为旧数据补充时间戳和频道信息
+                        self.seen_items_with_time = {item_id: {
+                            'timestamp': datetime.now().isoformat(),
+                            'rss_url': 'unknown',
+                            'channel_uid': 'unknown'
+                        } for item_id in self.seen_items}
                 logging.info(f"✅ 加载了 {len(self.seen_items)} 个已处理的微博ID")
         except Exception as e:
             logging.error(f"⚠️ 加载已见微博ID失败: {e}")
             self.seen_items = set()
+            self.seen_items_with_time = {}
     
     def _save_seen_items(self):
         """保存已见过的微博ID"""
         seen_file = os.path.join(self.config.data_dir, 'seen_items.json')
         try:
+            # 使用新的数据结构保存
+            items_data = []
+            for item_id in self.seen_items:
+                item_info = self.seen_items_with_time.get(item_id, {
+                    'timestamp': datetime.now().isoformat(),
+                    'rss_url': 'unknown'
+                })
+                items_data.append({
+                    'id': item_id,
+                    'timestamp': item_info['timestamp'],
+                    'rss_url': item_info['rss_url'],
+                    'channel_uid': item_info.get('channel_uid', 'unknown')
+                })
+            
             data = {
-                'seen_items': list(self.seen_items),
-                'last_update': datetime.now().isoformat()
+                'items': items_data,
+                'last_update': datetime.now().isoformat(),
+                'total_count': len(items_data)
             }
+            
             with open(seen_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logging.error(f"⚠️ 保存已见微博ID失败: {e}")
+    
+    def _cleanup_seen_items(self):
+        """清理过期的seen_items记录（每个频道最多保留指定条数）"""
+        try:
+            initial_count = len(self.seen_items)
+            if initial_count == 0:
+                return False
+            
+            cleaned_items = set()
+            cleaned_items_with_time = {}
+            
+            # 按频道ID分组
+            items_by_channel = {}
+            for item_id in self.seen_items:
+                item_info = self.seen_items_with_time.get(item_id, {})
+                channel_uid = item_info.get('channel_uid', 'unknown')
+                if channel_uid not in items_by_channel:
+                    items_by_channel[channel_uid] = []
+                items_by_channel[channel_uid].append((item_id, item_info))
+            
+            # 对每个频道只保留最新的N条记录
+            for channel_uid, channel_items in items_by_channel.items():
+                # 按时间戳排序，保留最新的记录
+                channel_items.sort(key=lambda x: x[1].get('timestamp', ''), reverse=True)
+                
+                # 只保留最新的N条记录
+                max_count = self.config.seen_items_max_count_per_channel
+                kept_items = channel_items[:max_count]
+                
+                # 添加到清理后的集合
+                for item_id, item_info in kept_items:
+                    cleaned_items.add(item_id)
+                    cleaned_items_with_time[item_id] = item_info
+                
+                # 记录清理情况
+                removed_from_channel = len(channel_items) - len(kept_items)
+                if removed_from_channel > 0:
+                    logging.info(f"🧹 频道 {channel_uid}: 删除了 {removed_from_channel} 个旧记录，保留 {len(kept_items)} 个")
+            
+            # 更新数据
+            removed_count = initial_count - len(cleaned_items)
+            if removed_count > 0:
+                self.seen_items = cleaned_items
+                self.seen_items_with_time = cleaned_items_with_time
+                logging.info(f"🧹 seen_items清理完成: 总共删除 {removed_count} 个记录，剩余 {len(cleaned_items)} 个")
+                return True
+            else:
+                logging.info(f"✅ seen_items无需清理，当前记录数: {len(cleaned_items)}")
+                return False
+                
+        except Exception as e:
+            logging.error(f"⚠️ 清理seen_items失败: {e}")
+            return False
+    
+    def _extract_channel_uid(self, channel_info, rss_url):
+        """提取频道UID"""
+        try:
+            # 方法1：从频道链接中提取UID
+            link = channel_info.get('link', '')
+            if '/u/' in link:
+                # 格式：https://weibo.com/u/1234567890
+                uid = link.split('/u/')[-1].split('?')[0].split('/')[0]
+                return uid[:10]  # 限制长度
+            elif 'weibo.com/' in link:
+                # 其他格式尝试提取数字ID
+                import re
+                numbers = re.findall(r'\d+', link)
+                if numbers:
+                    return numbers[0][:10]
+            
+            # 方法2：从RSS URL中提取
+            if '/weibo/user/' in rss_url:
+                import re
+                match = re.search(r'/weibo/user/(\w+)', rss_url)
+                if match:
+                    return match.group(1)[:10]
+            
+            # 方法3：如果无法提取，使用频道标题的哈希
+            title = channel_info.get('title', 'unknown')
+            return str(abs(hash(title)))[:8]
+        except:
+            return "unknown"
     
     def _generate_item_id(self, rss_url: str, item: Dict) -> str:
         """生成微博项目的唯一ID"""
@@ -158,6 +284,13 @@ class WeiboMonitor:
                     item['item_id'] = item_id
                     new_items.append(item)
                     self.seen_items.add(item_id)
+                    # 提取频道ID并保存时间戳和RSS源信息
+                    channel_uid = self._extract_channel_uid(channel_info, rss_url)
+                    self.seen_items_with_time[item_id] = {
+                        'timestamp': datetime.now().isoformat(),
+                        'rss_url': rss_url,
+                        'channel_uid': channel_uid
+                    }
             
             if new_items:
                 logging.info(f"🆕 发现 {len(new_items)} 条新微博: {rss_url}")
@@ -265,6 +398,9 @@ class WeiboMonitor:
         cleanup_counter = 0
         cleanup_interval = 24  # 每24次检查（大约一天）运行一次清理
         
+        # seen_items清理间隔（根据配置，默认每7天清理一次）
+        seen_cleanup_interval = max(1, self.config.seen_items_cleanup_interval * 24)  # 转换为检查次数
+        
         try:
             while True:
                 self.run_once()
@@ -279,6 +415,17 @@ class WeiboMonitor:
                         cleanup_counter = 0
                     except Exception as e:
                         logging.error(f"⚠️ 清理任务失败: {e}")
+                
+                # 定期清理seen_items
+                self.seen_cleanup_counter += 1
+                if self.seen_cleanup_counter >= seen_cleanup_interval:
+                    try:
+                        logging.info("🧹 开始清理seen_items...")
+                        if self._cleanup_seen_items():
+                            self._save_seen_items()
+                        self.seen_cleanup_counter = 0
+                    except Exception as e:
+                        logging.error(f"⚠️ seen_items清理失败: {e}")
                 
                 # 等待下次检查
                 logging.info(f"⏳ 等待 {self.config.check_interval} 秒后进行下次检查...")

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-自动清理脚本 - 清理推送成功后的图片（1天后自动删除）
+自动清理脚本 - 清理推送成功后的图片（1天后自动删除）和seen_items.json的过期记录
 """
 
 import os
@@ -12,8 +12,9 @@ import logging
 
 # 配置
 OUTPUTS_DIR = Path("/app/outputs") if os.path.exists("/app/outputs") else Path("./outputs")
-DATA_DIR = Path("/app/data") if os.path.exists("/app/data") else Path("./data")
+DATA_DIR = Path("./data") if os.path.exists("./data") else Path("/app/data") if os.path.exists("/app/data") else Path("./data")
 CLEANUP_LOG_FILE = DATA_DIR / "cleanup.json"
+SEEN_ITEMS_FILE = DATA_DIR / "seen_items.json"
 CLEANUP_AFTER_DAYS = 1  # 推送成功后几天删除图片
 
 # 设置日志
@@ -222,10 +223,117 @@ def run_cleanup():
     # 清理孤儿图片
     deleted2, size2 = manager.cleanup_orphaned_images()
     
+    # 清理seen_items.json
+    cleaned_seen_items = cleanup_seen_items()
+    
     # 总计
     total_deleted = deleted1 + deleted2
     total_size = (size1 + size2) / (1024 * 1024)
     
-    logger.info(f"🎉 清理任务完成: 总共删除 {total_deleted} 个文件，释放 {total_size:.2f}MB 空间")
+    logger.info(f"🎉 清理任务完成: 删除图片 {total_deleted} 个，释放 {total_size:.2f}MB 空间，清理seen_items {cleaned_seen_items} 个")
+    
+    return {
+        'deleted_images': total_deleted,
+        'freed_size_mb': total_size,
+        'cleaned_seen_items': cleaned_seen_items
+    }
+
+def cleanup_seen_items():
+    """清理seen_items.json中的过期记录（每个频道最多保留50条）"""
+    try:
+        if not SEEN_ITEMS_FILE.exists():
+            logger.info("📋 seen_items.json 文件不存在，跳过清理")
+            return 0
+        
+        # 读取配置
+        max_count_per_channel = int(os.getenv('SEEN_ITEMS_MAX_COUNT_PER_CHANNEL', 50))
+        
+        # 加载seen_items数据
+        with open(SEEN_ITEMS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # 兼容旧格式和新格式
+        if isinstance(data, dict) and 'items' in data:
+            # 新格式：{'items': [{'id': 'xxx', 'timestamp': 'xxx', 'channel_uid': 'xxx'}]}
+            items_data = data.get('items', [])
+        else:
+            # 旧格式：{'seen_items': ['id1', 'id2'], 'last_update': 'xxx'} 或 ['id1', 'id2']
+            old_items = data.get('seen_items', data) if isinstance(data, dict) else data
+            if isinstance(old_items, list):
+                # 为旧数据补充时间戳和频道信息
+                current_time = datetime.now()
+                items_data = [{
+                    'id': item_id,
+                    'timestamp': current_time.isoformat(),
+                    'rss_url': 'unknown',
+                    'channel_uid': 'unknown'
+                } for item_id in old_items]
+            else:
+                items_data = []
+        
+        initial_count = len(items_data)
+        logger.info(f"📋 开始清理seen_items，当前记录数: {initial_count}")
+        
+        if initial_count == 0:
+            return 0
+        
+        # 按频道ID分组
+        items_by_channel = {}
+        for item in items_data:
+            channel_uid = item.get('channel_uid', 'unknown')
+            if channel_uid not in items_by_channel:
+                items_by_channel[channel_uid] = []
+            items_by_channel[channel_uid].append(item)
+        
+        # 对每个频道只保留最新的N条记录
+        cleaned_items = []
+        channel_stats = {}
+        
+        for channel_uid, channel_items in items_by_channel.items():
+            original_count = len(channel_items)
+            
+            # 按时间戳排序，保留最新的记录
+            channel_items.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+            
+            # 只保留最新的N条记录
+            kept_items = channel_items[:max_count_per_channel]
+            removed_from_channel = original_count - len(kept_items)
+            
+            if removed_from_channel > 0:
+                channel_stats[channel_uid] = {
+                    'removed': removed_from_channel,
+                    'remaining': len(kept_items)
+                }
+            
+            # 添加到清理后的列表
+            cleaned_items.extend(kept_items)
+        
+        removed_count = initial_count - len(cleaned_items)
+        
+        if removed_count > 0:
+            # 保存清理后的数据
+            new_data = {
+                'items': cleaned_items,
+                'last_update': datetime.now().isoformat(),
+                'total_count': len(cleaned_items),
+                'last_cleanup': datetime.now().isoformat(),
+                'cleaned_count': removed_count,
+                'channel_stats': channel_stats
+            }
+            
+            with open(SEEN_ITEMS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(new_data, f, ensure_ascii=False, indent=2)
+            
+            logger.info(f"🧹 seen_items清理完成: 删除了 {removed_count} 个旧记录，剩余 {len(cleaned_items)} 个")
+            for channel_uid, stats in channel_stats.items():
+                logger.info(f"   📋 频道 {channel_uid}: 删除 {stats['removed']} 个，保留 {stats['remaining']} 个")
+        else:
+            logger.info(f"✅ seen_items无需清理，当前记录数: {len(cleaned_items)}")
+        
+        return removed_count
+        
+    except Exception as e:
+        logger.error(f"⚠️ 清理seen_items失败: {e}")
+        return 0
 
 
