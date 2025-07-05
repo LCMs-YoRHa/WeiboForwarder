@@ -15,54 +15,30 @@
 
 ## 🚀 快速开始
 
-### 一键部署（Linux服务器）
+### Docker Compose 部署（唯一支持方式）
 
 ```bash
 # 下载项目
 git clone <repository-url>
 cd weibo-rss-monitor
 
-# 一键部署（自动安装Docker和依赖）
-chmod +x docker/deploy.sh
-sudo ./docker/deploy.sh
-```
-
-### 手动部署
-
-1. **准备配置文件**
-```bash
+# 配置环境变量
 cp .env.example .env
-nano .env  # 编辑配置
-```
+# 编辑 .env 文件，填入你的配置
+notepad .env  # Windows
+# 或 nano .env  # Linux/macOS
 
-2. **启动服务**
-```bash
-chmod +x start.sh && ./start.sh
-```
+# 启动服务
+docker-compose up -d --build
 
-详细部署说明请参考 [Docker部署指南](DOCKER.md)
+# 查看运行状态
+docker-compose ps
 
-### 本地运行
+# 查看日志
+docker-compose logs -f
 
-1. **安装依赖**
-```bash
-pip install -r requirements.txt
-```
-
-2. **配置企业微信**
-编辑 `wecom_config.py` 文件，填入企业微信信息
-
-3. **运行程序**
-
-```bash
-# 生成单张长图（需要配置RSS URL）
-python Weibo.py --rss-url http://your-rss-url --index 0
-
-# 列出所有微博
-python Weibo.py --rss-url http://your-rss-url --list
-
-# 实时监听模式
-python monitor.py
+# 停止服务
+docker-compose down
 ```
 
 ## 📋 功能模块
@@ -78,7 +54,6 @@ python monitor.py
 
 - **`Dockerfile`**: Docker镜像定义
 - **`docker-compose.yml`**: 服务编排
-- **`start.sh`**: 启动脚本
 
 ## 🛠️ 配置说明
 
@@ -130,18 +105,13 @@ weibo-rss-monitor/
 │   ├── Weibo.py           # 命令行工具
 │   ├── font_manager.py    # 字体管理模块
 │   ├── cleanup.py         # 自动清理模块
-│   ├── manual_cleanup.sh  # 手动清理脚本
-│   ├── run_cleanup.sh     # 定时清理脚本
 │   ├── wecom_config.py    # 企业微信配置
 │   └── fonts/            # 字体文件目录
 ├── docker/               # Docker相关文件
 │   ├── Dockerfile        # Docker镜像定义
 │   ├── .dockerignore     # Docker忽略文件
-│   ├── deploy.sh         # 一键部署脚本
-│   ├── start.sh          # Docker启动脚本
 │   └── healthcheck.py    # 健康检查脚本
 ├── docker-compose.yml    # Docker编排文件
-├── start.sh              # 快速启动脚本
 ├── .env.example          # 配置模板
 ├── .env                  # 配置文件（需要创建）
 ├── requirements.txt      # Python依赖
@@ -151,28 +121,29 @@ weibo-rss-monitor/
 └── README.md            # 项目说明
 ```
 
-## 🔧 高级用法
+## 🔧 服务管理
 
-### 命令行工具
-
-```bash
-# 从RSS源生成长图
-python sources/Weibo.py --rss-url http://your-rss-url --index 0
-
-# 自动推送到企业微信（需配置）
-python sources/Weibo.py --rss-url http://your-rss-url --index 0 --push
-
-# 列出所有微博
-python sources/Weibo.py --rss-url http://your-rss-url --list
-```
-
-### 监听服务管理
+### Docker Compose 命令
 
 ```bash
 # 查看服务状态
 docker-compose ps
 
 # 查看实时日志
+docker-compose logs -f
+
+# 重启服务
+docker-compose restart
+
+# 更新并重启
+docker-compose up -d --build
+
+# 停止服务
+docker-compose down
+
+# 进入容器调试
+docker exec -it WeiboForwarder bash
+```
 docker-compose logs -f
 
 # 重启服务
@@ -205,11 +176,8 @@ success = push_image_file(image_file, corpid="...", corpsecret="...", agentid=12
 ### 健康检查
 
 ```bash
-# Docker环境
-docker exec weibo-rss-monitor python healthcheck.py
-
-# 本地环境
-python healthcheck.py
+# Docker环境健康检查
+docker exec WeiboForwarder python /app/docker/healthcheck.py
 ```
 
 ### 关键指标
@@ -223,16 +191,6 @@ python healthcheck.py
 
 ### RSSHub 连接问题
 
-#### 检查网络连接
-
-```bash
-# Linux/macOS
-./docker/network-check.sh
-
-# Windows
-./docker/network-check.bat
-```
-
 #### 手动验证连接
 
 ```bash
@@ -243,7 +201,7 @@ docker ps | grep rsshub
 docker network ls | grep rsshub
 
 # 测试内部连接
-docker exec weibo-rss-monitor ping rsshub
+docker exec WeiboForwarder ping rsshub
 ```
 
 #### 常见解决方案
@@ -272,8 +230,7 @@ docker exec weibo-rss-monitor ping rsshub
 
 1. **RSS地址无法访问**
    - 检查网络连接和RSS地址有效性
-   - 使用 `python sources/test_rsshub.py` 测试连接
-   - 查看监听服务日志
+   - 查看监听服务日志：`docker-compose logs -f`
 
 2. **企业微信推送失败**
    - 验证企业微信配置信息
@@ -290,11 +247,11 @@ docker exec weibo-rss-monitor ping rsshub
 ### 调试模式
 
 ```bash
-# 设置调试日志级别
+# 设置调试日志级别（在.env文件中）
 LOG_LEVEL=DEBUG
 
 # 查看详细日志
-docker-compose logs -f | grep DEBUG
+docker-compose logs -f
 ```
 
 ## 🤝 贡献
