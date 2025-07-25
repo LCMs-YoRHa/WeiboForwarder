@@ -203,11 +203,12 @@ docker exec WeiboForwarder ping rsshub
    ```
 
 2. **RSSHub未运行**
+   
    ```bash
    # 启动RSSHub服务
    docker start rsshub
    ```
-
+   
 3. **使用外部地址**
    ```bash
    # 在.env中使用服务器IP
